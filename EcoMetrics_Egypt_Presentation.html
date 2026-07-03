@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoMetrics Egypt — Turning Waste Into Data. Data Into Action.</title>
+
+<!-- ============================================================
+     FONT IMPORTS
+     Fraunces  -> high-contrast warm display serif, used for all
+                  headlines. Chosen specifically to avoid the
+                  generic Inter/Space-Grotesk AI-deck look while
+                  still reading as a credible analytical report —
+                  it has the gravity of a printed ledger.
+     Sora      -> geometric sans with slightly unusual letterforms,
+                  used for body copy, labels, numerals, and chart
+                  text. Distinct from Arial/Inter/Roboto.
+     JetBrains Mono -> used sparingly for data tags / DAX code /
+                  technical labels to signal "this is measured
+                  data," not decoration.
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,500&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   SECTION: DESIGN TOKENS
+   "Verdant Ledger" — a bespoke aesthetic built for this brief:
+   deep ink-green canvas (the look of a field-data notebook),
+   warm gold for recovered/economic value, signal teal for data
+   and clarity, rust-red reserved strictly for loss/contamination/
+   downtime. No purple gradients, no generic SaaS blue.
+   ================================================================ */
+:root{
+  /* canvas + surfaces */
+  --canvas:        #070D09;
+  --canvas-grad-a:  #081209;
+  --canvas-grad-b:  #050907;
+  --surface:        #0E1712;
+  --surface-2:      #121D16;
+  --card:            rgba(232,240,234,0.03);
+  --card-border:    rgba(201,162,60,0.18);
+  --card-border-strong: rgba(201,162,60,0.38);
+  --hairline:       rgba(232,240,234,0.10);
+
+  /* text */
+  --ink:            #E8F0EA;
+  --ink-soft:       #C3D2C7;
+  --ink-mute:       #7E9485;
+  --ink-faint:      #4D5D52;
+
+  /* accents */
+  --gold:           #C9A23C;
+  --gold-bright:    #E4C467;
+  --gold-dim:       #8A6E27;
+  --teal:           #1FD8B4;
+  --teal-bright:    #5CF0D3;
+  --teal-dim:       #14705D;
+  --rust:           #E2574C;
+  --rust-bright:    #FF7A6E;
+  --amber:          #E0A23A;
+
+  /* gradients */
+  --grad-vignette: radial-gradient(circle at 18% 12%, rgba(31,216,180,0.07), transparent 42%),
+                    radial-gradient(circle at 86% 88%, rgba(201,162,60,0.08), transparent 46%);
+
+  /* type */
+  --f-display: 'Fraunces', serif;
+  --f-body: 'Sora', sans-serif;
+  --f-mono: 'JetBrains Mono', monospace;
+
+  /* stage */
+  --stage-w: 1920px;
+  --stage-h: 1080px;
+}
+
+*{ box-sizing: border-box; }
+html,body{
+  margin:0; padding:0; width:100%; height:100%;
+  background: var(--canvas);
+  overflow: hidden;
+  font-family: var(--f-body);
+}
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ================================================================
+   SECTION: VIEWPORT WRAPPER + FIXED 1920x1080 STAGE
+   The whole deck is authored at a fixed 1920x1080 design size.
+   #viewport fills the browser window; #stage is transform-scaled
+   uniformly to fit inside it (letterbox/pillarbox as needed).
+   Nothing inside .slide ever reflows for screen size — only the
+   outer scale changes. This satisfies the skill's fixed 16:9
+   stage rule on every device, phones included.
+   ================================================================ */
+#viewport{
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh;
+  background: var(--canvas);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
+#stage{
+  position: relative;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  flex-shrink: 0;
+  transform-origin: center center;
+  background: var(--canvas);
+}
+
+/* ================================================================
+   SECTION: SLIDE BASE
+   Slides are absolutely positioned on top of one another at the
+   fixed 1920x1080 size. Visibility is controlled purely through
+   opacity / visibility / pointer-events on .active — never via
+   display:none/block — so later flex/grid rules on .slide-content
+   can never leak and reveal every slide simultaneously.
+   ================================================================ */
+.slide{
+  position: absolute;
+  inset: 0;
+  width: var(--stage-w);
+  height: var(--stage-h);
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+  background: var(--canvas-grad-a);
+  background-image:
+    var(--grad-vignette),
+    linear-gradient(160deg, var(--canvas-grad-a) 0%, var(--canvas-grad-b) 100%);
+}
+.slide.active{
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* faint engraved grid texture across every slide — the "field ledger" paper */
+.slide::before{
+  content:'';
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(232,240,234,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232,240,234,0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events:none;
+  opacity: 0.5;
+}
+
+.slide-inner{
+  position:relative;
+  z-index: 2;
+  width: 100%; height: 100%;
+  padding: 88px 120px 96px 120px;
+  display:flex;
+  flex-direction: column;
+}
+
+/* ================================================================
+   SECTION: SHARED CHROME — eyebrow / kicker / numbering / footer
+   These structural devices encode something true about the deck:
+   the eyebrow names which of the 34 numbered sections this is,
+   since the underlying content genuinely is a sequence (problem
+   -> pipeline -> dashboard -> findings -> recommendations).
+   ================================================================ */
+.kicker{
+  font-family: var(--f-mono);
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--teal);
+  display:flex; align-items:center; gap:16px;
+  margin-bottom: 18px;
+}
+.kicker .dot{ width:7px; height:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 12px var(--teal); }
+.kicker .rule{ flex:0 0 64px; height:1px; background: linear-gradient(90deg, var(--teal), transparent); }
+
+.slide-foot{
+  position:absolute;
+  left:120px; right:120px; bottom: 40px;
+  display:flex; justify-content:space-between; align-items:center;
+  font-family: var(--f-mono);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  z-index: 3;
+}
+.slide-foot .brand{ color: var(--gold-dim); }
+.slide-foot .pageno{ color: var(--ink-faint); }
+
+h1,h2,h3,h4{ font-family: var(--f-display); margin:0; color:var(--ink); font-weight:600; }
+
+.deck-title{
+  font-size: 104px;
+  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.deck-title em{ font-style: italic; color: var(--gold-bright); font-weight: 500; }
+
+.section-title{
+  font-size: 64px;
+  line-height: 1.08;
+  font-weight: 600;
+  max-width: 1500px;
+}
+.section-title .accent{ color: var(--teal-bright); }
+.section-title .accent-gold{ color: var(--gold-bright); }
+
+.subtitle{
+  font-family: var(--f-body);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 1180px;
+}
+
+p.lede{
+  font-family: var(--f-body);
+  font-size: 22px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 1240px;
+}
+
+.hairline{ height:1px; background: var(--hairline); width:100%; }
+
+/* number badges (used because the content is genuinely sequential) */
+.numtag{
+  font-family: var(--f-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--gold-dim);
+}
+
+/* generic card */
+.card{
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  backdrop-filter: blur(2px);
+}
+
+/* reveal-on-active animation utility */
+.reveal{
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s cubic-bezier(.16,.84,.32,1), transform 0.7s cubic-bezier(.16,.84,.32,1);
+}
+.slide.active .reveal{ opacity:1; transform:translateY(0); }
+.slide.active .reveal.d1{ transition-delay: 0.08s; }
+.slide.active .reveal.d2{ transition-delay: 0.16s; }
+.slide.active .reveal.d3{ transition-delay: 0.24s; }
+.slide.active .reveal.d4{ transition-delay: 0.32s; }
+.slide.active .reveal.d5{ transition-delay: 0.40s; }
+.slide.active .reveal.d6{ transition-delay: 0.48s; }
+.slide.active .reveal.d7{ transition-delay: 0.56s; }
+.slide.active .reveal.d8{ transition-delay: 0.64s; }
+
+/* SVG chart draw-in */
+.draw-line{
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  transition: stroke-dashoffset 1.8s cubic-bezier(.16,.84,.32,1);
+}
+.slide.active .draw-line{ stroke-dashoffset: 0; }
+
+.grow-bar{ transform: scaleX(0); transform-origin: left center; transition: transform 1.1s cubic-bezier(.16,.84,.32,1); }
+.slide.active .grow-bar{ transform: scaleX(1); }
+.grow-bar-v{ transform: scaleY(0); transform-origin: bottom center; transition: transform 1.1s cubic-bezier(.16,.84,.32,1); }
+.slide.active .grow-bar-v{ transform: scaleY(1); }
+
+.fade-in{ opacity:0; transition: opacity 1.2s ease; }
+.slide.active .fade-in{ opacity:1; }
+
+.pop-in{ opacity:0; transform: scale(0.7); transition: opacity .6s ease, transform .6s cubic-bezier(.34,1.56,.64,1); }
+.slide.active .pop-in{ opacity:1; transform:scale(1); }
+
+/* ================================================================
+   SECTION: NAVIGATION CHROME (outside the 1920x1080 stage logic —
+   positioned relative to the viewport, sized with clamp() since
+   this is non-stage UI, per the skill's clamp() exception)
+   ================================================================ */
+#nav-dots{
+  position: fixed;
+  right: clamp(14px, 2vw, 30px);
+  top: 50%;
+  transform: translateY(-50%);
+  display:flex; flex-direction:column; gap: clamp(8px,1vh,12px);
+  z-index: 50;
+}
+#nav-dots button{
+  width: clamp(7px,0.9vh,10px); height: clamp(7px,0.9vh,10px);
+  border-radius:50%;
+  border: 1px solid rgba(232,240,234,0.35);
+  background: transparent;
+  cursor:pointer;
+  padding:0;
+  transition: all 0.25s ease;
+}
+#nav-dots button.active{
+  background: var(--teal);
+  border-color: var(--teal);
+  box-shadow: 0 0 10px rgba(31,216,180,0.7);
+  transform: scale(1.3);
+}
+#nav-dots button:hover{ border-color: var(--gold-bright); }
+
+#progress-bar{
+  position: fixed; left:0; top:0; height: 3px;
+  background: linear-gradient(90deg, var(--teal), var(--gold));
+  z-index: 51;
+  transition: width 0.4s ease;
+}
+
+#arrow-left, #arrow-right{
+  position: fixed; top:50%; transform: translateY(-50%);
+  width: clamp(36px,4vw,52px); height: clamp(36px,4vw,52px);
+  border-radius:50%;
+  border:1px solid rgba(232,240,234,0.18);
+  background: rgba(8,14,10,0.55);
+  color: var(--ink-soft);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; z-index:50;
+  font-size: clamp(18px,2vw,22px);
+  transition: all 0.2s ease;
+  opacity: 0.55;
+}
+#arrow-left:hover, #arrow-right:hover{ opacity:1; border-color: var(--teal); color: var(--teal-bright); }
+#arrow-left{ left: clamp(10px,1.6vw,28px); }
+#arrow-right{ right: clamp(54px,6vw,82px); }
+
+#slide-counter{
+  position: fixed; left: clamp(14px,2vw,30px); bottom: clamp(14px,2vh,24px);
+  font-family: var(--f-mono);
+  font-size: clamp(11px,1.1vw,14px);
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  z-index: 50;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .reveal, .draw-line, .grow-bar, .grow-bar-v, .fade-in, .pop-in{ transition: none !important; opacity:1 !important; transform:none !important; stroke-dashoffset:0 !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<div id="viewport">
+  <div id="stage">
+    
+<!-- ============================================================
+     SLIDE 01 — TITLE
+     ============================================================ -->
+<section class="slide active" id="slide-1" data-slide="1">
+  <div class="slide-inner" style="justify-content:center; align-items:flex-start;">
+    <div class="reveal d1" style="position:absolute; top:88px; left:120px; right:120px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="kicker"><span class="dot"></span><span class="rule"></span>DEPI DATA ANALYTICS CAPSTONE &middot; 2024&ndash;2025</div>
+      <div style="font-family:var(--f-mono); font-size:16px; color:var(--ink-faint); letter-spacing:0.1em;">CAIRO &amp; GIZA, ARAB REPUBLIC OF EGYPT</div>
+    </div>
+
+    <div style="max-width:1500px;">
+      <h1 class="deck-title reveal d2">EcoMetrics<br><em>Egypt</em></h1>
+      <div class="reveal d3" style="display:flex; align-items:center; gap:24px; margin-top:34px;">
+        <div style="width:64px; height:1px; background:var(--gold);"></div>
+        <p style="font-family:var(--f-display); font-style:italic; font-size:30px; color:var(--ink-soft); margin:0;">Turning Waste Into Data. Data Into Action.</p>
+      </div>
+      <p class="lede reveal d4" style="margin-top:30px;">A Business Intelligence framework diagnosing Egypt's recycling bottlenecks &mdash; from collection trucks to sorting conveyors &mdash; built to accelerate Egypt Vision 2030.</p>
+    </div>
+
+    <!-- signature element: the recurring "material ring" motif, an infinity loop
+         echoing the waste-stream graphic, rendered live in SVG -->
+    <svg class="reveal d5" width="430" height="230" viewBox="0 0 430 230" style="position:absolute; right:120px; bottom:170px;">
+      <defs>
+        <linearGradient id="ringGoldTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="var(--teal)"/>
+          <stop offset="100%" stop-color="var(--gold)"/>
+        </linearGradient>
+      </defs>
+      <path class="draw-line" d="M40,115 C40,60 100,40 145,75 C190,110 195,160 215,160 C235,160 240,110 285,75 C330,40 390,60 390,115 C390,170 330,190 285,155 C240,120 235,70 215,70 C195,70 190,120 145,155 C100,190 40,170 40,115 Z"
+        fill="none" stroke="url(#ringGoldTeal)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="215" cy="115" r="5" fill="var(--teal-bright)"/>
+    </svg>
+
+    <div class="reveal d6" style="position:absolute; left:120px; bottom:170px; display:flex; gap:64px;">
+      <div><div style="font-family:var(--f-display); font-size:46px; color:var(--gold-bright); font-weight:600;">100M+</div><div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.06em;">TONS WASTE / YEAR</div></div>
+      <div><div style="font-family:var(--f-display); font-size:46px; color:var(--teal-bright); font-weight:600;">37%</div><div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.06em;">RECYCLING RATE (2024)</div></div>
+      <div><div style="font-family:var(--f-display); font-size:46px; color:var(--ink); font-weight:600;">60%</div><div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.06em;">VISION 2030 TARGET</div></div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">01 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 02 — INSTITUTIONAL FRAMEWORK
+     ============================================================ -->
+<section class="slide" id="slide-2" data-slide="2">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>01 &middot; PROJECT IDENTITY</div>
+    <h2 class="section-title reveal d2">Built within a national<br><span class="accent">digital pioneers</span> initiative.</h2>
+    <p class="subtitle reveal d3" style="margin-top:22px;">EcoMetrics Egypt is a Business Intelligence framework for Microsoft Power BI, developed under Egypt's official capstone pathway for data analytics talent.</p>
+
+    <div style="display:flex; gap:36px; margin-top:60px;">
+      <div class="card reveal d4" style="flex:1; padding:38px;">
+        <div class="numtag">01</div>
+        <h3 style="font-size:28px; margin-top:14px;">Digital Egypt Pioneers Initiative</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); letter-spacing:.08em; margin:10px 0 18px;">DEPI &middot; depi.gov.eg</div>
+        <p style="color:var(--ink-soft); font-size:18px; line-height:1.6;">Institutional framework under the Ministry of Communications and Information Technology (MCIT), Arab Republic of Egypt &mdash; a national initiative building a generation of digital pioneers across software, data analytics, AI, and more.</p>
+      </div>
+      <div class="card reveal d5" style="flex:1; padding:38px;">
+        <div class="numtag">02</div>
+        <h3 style="font-size:28px; margin-top:14px;">Computik Learning Solutions</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.08em; margin:10px 0 18px;">LEARNING PARTNER</div>
+        <p style="color:var(--ink-soft); font-size:18px; line-height:1.6;">Provided the structured learning environment, technical resources, and curriculum scaffolding for the DEPI Data Analytics capstone program from inception to delivery.</p>
+      </div>
+      <div class="card reveal d6" style="flex:1; padding:38px;">
+        <div class="numtag">03</div>
+        <h3 style="font-size:28px; margin-top:14px;">Ministry of Communications &amp; IT</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-soft); letter-spacing:.08em; margin:10px 0 18px;">MCIT &middot; mcit.gov.eg</div>
+        <p style="color:var(--ink-soft); font-size:18px; line-height:1.6;">The parent ministry overseeing the DEPI initiative nationally &mdash; anchoring the project's relevance to Egypt's broader digital transformation strategy.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">02 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 03 — THE TEAM
+     ============================================================ -->
+<section class="slide" id="slide-3" data-slide="3">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>02 &middot; THE TEAM</div>
+    <h2 class="section-title reveal d2">Five researchers.<br>Two cities. One <span class="accent-gold">dataset</span>.</h2>
+    <p class="subtitle reveal d3" style="margin-top:18px;">The EcoMetrics Egypt project was built by five data analytics researchers from the DEPI Data Analytics Track, spread across Giza and Cairo, under expert supervision.</p>
+
+    <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:22px; margin-top:48px;">
+      <!-- team cards -->
+      <div class="card reveal d4" style="padding:26px 20px; text-align:center;">
+        <div style="width:78px; height:78px; border-radius:50%; margin:0 auto 18px; background:linear-gradient(135deg,#00E5CC,#00876F); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-size:28px; font-weight:600; color:#04201A;">MA</div>
+        <h3 style="font-size:20px;">Mohamed Ali</h3>
+        <div style="font-size:14px; color:var(--ink-mute); margin-top:4px;">Data Analytics Researcher</div>
+        <div style="font-family:var(--f-mono); font-size:12px; color:var(--teal); margin-top:10px; letter-spacing:.05em;">GIZA, EGYPT</div>
+      </div>
+      <div class="card reveal d4" style="padding:26px 20px; text-align:center;">
+        <div style="width:78px; height:78px; border-radius:50%; margin:0 auto 18px; background:linear-gradient(135deg,#C9A84C,#7A6020); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-size:28px; font-weight:600; color:#2A2008;">SY</div>
+        <h3 style="font-size:20px;">Sondos Yasser</h3>
+        <div style="font-size:14px; color:var(--ink-mute); margin-top:4px;">Data Analytics Researcher</div>
+        <div style="font-family:var(--f-mono); font-size:12px; color:var(--gold-bright); margin-top:10px; letter-spacing:.05em;">CAIRO, EGYPT</div>
+      </div>
+      <div class="card reveal d5" style="padding:26px 20px; text-align:center;">
+        <div style="width:78px; height:78px; border-radius:50%; margin:0 auto 18px; background:linear-gradient(135deg,#4A9C8C,#1A5C50); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-size:28px; font-weight:600; color:#04201A;">ZM</div>
+        <h3 style="font-size:20px;">Zeyad Mohamed</h3>
+        <div style="font-size:14px; color:var(--ink-mute); margin-top:4px;">Data Analytics Researcher</div>
+        <div style="font-family:var(--f-mono); font-size:12px; color:var(--teal); margin-top:10px; letter-spacing:.05em;">GIZA, EGYPT</div>
+      </div>
+      <div class="card reveal d5" style="padding:26px 20px; text-align:center;">
+        <div style="width:78px; height:78px; border-radius:50%; margin:0 auto 18px; background:linear-gradient(135deg,#C9A84C,#8A5C2A); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-size:26px; font-weight:600; color:#2A2008;">MT</div>
+        <h3 style="font-size:18px;">Menna Tallah Khaled</h3>
+        <div style="font-size:14px; color:var(--ink-mute); margin-top:4px;">Data Analytics Researcher</div>
+        <div style="font-family:var(--f-mono); font-size:12px; color:var(--gold-bright); margin-top:10px; letter-spacing:.05em;">CAIRO, EGYPT</div>
+      </div>
+      <div class="card reveal d6" style="padding:26px 20px; text-align:center;">
+        <div style="width:78px; height:78px; border-radius:50%; margin:0 auto 18px; background:linear-gradient(135deg,#00B8A0,#004D44); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-size:28px; font-weight:600; color:#04201A;">KA</div>
+        <h3 style="font-size:20px;">Khaled Amr</h3>
+        <div style="font-size:14px; color:var(--ink-mute); margin-top:4px;">Data Analytics Researcher</div>
+        <div style="font-family:var(--f-mono); font-size:12px; color:var(--teal); margin-top:10px; letter-spacing:.05em;">CAIRO, EGYPT</div>
+      </div>
+    </div>
+
+    <div class="reveal d7" style="margin-top:38px; display:flex; align-items:center; gap:20px; padding-top:28px; border-top:1px solid var(--hairline);">
+      <div style="width:54px; height:54px; border-radius:50%; background:rgba(201,162,60,0.12); border:1px solid var(--card-border-strong); display:flex; align-items:center; justify-content:center; font-family:var(--f-display); font-size:22px; color:var(--gold-bright);">MS</div>
+      <div>
+        <div style="font-size:20px; font-weight:600; color:var(--ink); font-family:var(--f-display);">Eng. Mahmoud Seraj &mdash; Expert Supervisor</div>
+        <div style="font-size:16px; color:var(--ink-mute); margin-top:2px;">Technical guidance and supervision throughout the project lifecycle, under the DEPI program via Computik Learning Solutions.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">03 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 04 — THE PROBLEM: SCALE OF THE CRISIS
+     ============================================================ -->
+<section class="slide" id="slide-4" data-slide="4">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>03 &middot; THE PROBLEM</div>
+    <h2 class="section-title reveal d2">100 million tons.<br>Every single <span class="accent-gold">year</span>.</h2>
+    <p class="subtitle reveal d3" style="margin-top:18px; max-width:1280px;">Egypt generates more than 100 million tons of solid waste annually &mdash; one of the highest volumes in the MENA region &mdash; driven by a population exceeding 100 million and rapid urbanization across Cairo, Giza, and the Nile Delta. Every ton dumped is a ton of recoverable economic value permanently lost.</p>
+
+    <div style="display:flex; gap:28px; margin-top:54px;">
+      <div class="card reveal d4" style="flex:1; padding:36px; border-color:var(--card-border-strong);">
+        <div style="font-family:var(--f-display); font-size:64px; color:var(--rust-bright); font-weight:600;">80&ndash;88%</div>
+        <div style="font-size:17px; color:var(--ink-soft); margin-top:14px; line-height:1.5;">of all waste ends up in open landfills and unregulated dumps across the country.</div>
+      </div>
+      <div class="card reveal d5" style="flex:1; padding:36px;">
+        <div style="font-family:var(--f-display); font-size:64px; color:var(--teal-bright); font-weight:600;">5M</div>
+        <div style="font-size:17px; color:var(--ink-soft); margin-top:14px; line-height:1.5;">tons of plastic waste generated per year &mdash; a single material stream demanding dedicated sorting capacity.</div>
+      </div>
+      <div class="card reveal d6" style="flex:1; padding:36px;">
+        <div style="font-family:var(--f-display); font-size:64px; color:var(--gold-bright); font-weight:600;">EGP 1&ndash;2B</div>
+        <div style="font-size:17px; color:var(--ink-soft); margin-top:14px; line-height:1.5;">committed by the Egyptian government to recycling infrastructure investment.</div>
+      </div>
+      <div class="card reveal d7" style="flex:1; padding:36px;">
+        <div style="font-family:var(--f-display); font-size:64px; color:var(--ink); font-weight:600;">100M+</div>
+        <div style="font-size:17px; color:var(--ink-soft); margin-top:14px; line-height:1.5;">people &mdash; Egypt's population, exceeding 100 million, with continuing rapid urban growth.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">04 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 05 — PROGRESS TIMELINE 2018-2027 (live SVG line chart)
+     ============================================================ -->
+<section class="slide" id="slide-5" data-slide="5">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>03 &middot; THE PROBLEM</div>
+    <h2 class="section-title reveal d2">Six years of progress,<br>plotted in <span class="accent">full</span>.</h2>
+    <p class="subtitle reveal d3" style="margin-top:14px;">National recycling rate, 2018&ndash;2027. From a 10% baseline &mdash; where 90% of waste was unsustainably disposed &mdash; to a 37% rate in 2024, en route to Egypt Vision 2030's formal target of 60% by 2027.</p>
+
+    <div style="display:flex; gap:48px; margin-top:30px; align-items:flex-start;">
+      <svg class="reveal d4" width="1180" height="480" viewBox="0 0 1180 480">
+        <!-- gridlines -->
+        <g stroke="rgba(232,240,234,0.08)" stroke-width="1">
+          <line x1="80" y1="60" x2="80" y2="420"/>
+          <line x1="80" y1="420" x2="1140" y2="420"/>
+          <line x1="80" y1="330" x2="1140" y2="330" stroke-dasharray="4 6"/>
+          <line x1="80" y1="240" x2="1140" y2="240" stroke-dasharray="4 6"/>
+          <line x1="80" y1="150" x2="1140" y2="150" stroke-dasharray="4 6"/>
+          <line x1="80" y1="60" x2="1140" y2="60" stroke-dasharray="4 6"/>
+        </g>
+        <!-- y axis labels (0,15,30,45,60) -->
+        <g font-family="JetBrains Mono" font-size="15" fill="var(--ink-faint)">
+          <text x="60" y="425" text-anchor="end">0%</text>
+          <text x="60" y="335" text-anchor="end">15%</text>
+          <text x="60" y="245" text-anchor="end">30%</text>
+          <text x="60" y="155" text-anchor="end">45%</text>
+          <text x="60" y="65" text-anchor="end">60%</text>
+        </g>
+        <!-- target line at 60% (y=60) -->
+        <line x1="80" y1="60" x2="1140" y2="60" stroke="var(--gold)" stroke-width="2" stroke-dasharray="6 6" opacity="0.85"/>
+        <text x="1140" y="48" text-anchor="end" font-family="Sora" font-size="16" fill="var(--gold-bright)" font-weight="600">2030 VISION TARGET &middot; 60%</text>
+
+        <!-- data: 2018:10% 2020:18% 2022:27% 2024:37% 2027:60%(target,dashed continuation) -->
+        <!-- x positions: 2018=140,2020=350,2022=560,2024:770,2027:1080 ; y = 420 - pct*6 -->
+        <polyline class="draw-line" points="140,360 350,312 560,258 770,198" fill="none" stroke="var(--teal)" stroke-width="4" stroke-linecap="round"/>
+        <polyline class="draw-line" points="770,198 1080,60" fill="none" stroke="var(--gold)" stroke-width="3" stroke-dasharray="10 8" stroke-linecap="round"/>
+
+        <g>
+          <circle class="pop-in" cx="140" cy="360" r="8" fill="var(--teal-bright)"/>
+          <circle class="pop-in" cx="350" cy="312" r="8" fill="var(--teal-bright)"/>
+          <circle class="pop-in" cx="560" cy="258" r="8" fill="var(--teal-bright)"/>
+          <circle class="pop-in" cx="770" cy="198" r="9" fill="var(--teal-bright)" stroke="var(--ink)" stroke-width="2"/>
+          <circle class="pop-in" cx="1080" cy="60" r="9" fill="var(--gold)" stroke="var(--ink)" stroke-width="2"/>
+        </g>
+
+        <g font-family="Sora" font-size="18" font-weight="600" fill="var(--ink)" text-anchor="middle">
+          <text x="140" y="340">10%</text>
+          <text x="350" y="292">18%</text>
+          <text x="560" y="238">27%</text>
+          <text x="770" y="178" fill="var(--teal-bright)">37%</text>
+          <text x="1080" y="40" fill="var(--gold-bright)">60%</text>
+        </g>
+        <g font-family="JetBrains Mono" font-size="15" fill="var(--ink-mute)" text-anchor="middle">
+          <text x="140" y="448">2018</text>
+          <text x="350" y="448">2020</text>
+          <text x="560" y="448">2022</text>
+          <text x="770" y="448">2024</text>
+          <text x="1080" y="448">2027 &#9873;</text>
+        </g>
+      </svg>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:18px; padding-top:10px;">
+        <div class="reveal d5" style="border-left:2px solid var(--teal); padding-left:18px;"><div style="font-family:var(--f-mono); color:var(--ink-faint); font-size:13px;">2018</div><div style="color:var(--ink-soft); font-size:16px; margin-top:2px;">National baseline &mdash; 90% of waste unsustainably disposed.</div></div>
+        <div class="reveal d6" style="border-left:2px solid var(--teal); padding-left:18px;"><div style="font-family:var(--f-mono); color:var(--ink-faint); font-size:13px;">2020</div><div style="color:var(--ink-soft); font-size:16px; margin-top:2px;">Early sorting infrastructure investments begin showing results.</div></div>
+        <div class="reveal d7" style="border-left:2px solid var(--teal); padding-left:18px;"><div style="font-family:var(--f-mono); color:var(--ink-faint); font-size:13px;">2022</div><div style="color:var(--ink-soft); font-size:16px; margin-top:2px;">Public-private partnerships accelerate sorting capacity.</div></div>
+        <div class="reveal d8" style="border-left:2px solid var(--gold); padding-left:18px;"><div style="font-family:var(--f-mono); color:var(--ink-faint); font-size:13px;">2024</div><div style="color:var(--ink-soft); font-size:16px; margin-top:2px;">3.7&times; improvement over 2018 &mdash; but 23 points short of target.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">05 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 06 — THE GAP (quote slide)
+     ============================================================ -->
+<section class="slide" id="slide-6" data-slide="6">
+  <div class="slide-inner" style="justify-content:center; align-items:center; text-align:center;">
+    <div class="kicker reveal d1" style="position:absolute; top:88px; left:120px;"><span class="dot"></span><span class="rule"></span>03 &middot; THE PROBLEM</div>
+
+    <div style="max-width:1300px;">
+      <div class="reveal d2" style="font-family:var(--f-mono); font-size:18px; color:var(--gold-bright); letter-spacing:.1em; margin-bottom:30px;">37% &nbsp;&middot;&nbsp; 23-POINT GAP &nbsp;&middot;&nbsp; 60% BY 2027</div>
+      <p class="reveal d3" style="font-family:var(--f-display); font-style:italic; font-weight:500; font-size:54px; line-height:1.35; color:var(--ink); margin:0;">
+        &ldquo;The gap between 37% and 60% will not close on its own &mdash;<br>but data can show exactly where to push.&rdquo;
+      </p>
+
+      <div class="reveal d4" style="margin-top:56px; display:flex; justify-content:center; align-items:center; gap:0;">
+        <div style="text-align:center; padding:0 56px;">
+          <div style="font-family:var(--f-display); font-size:58px; color:var(--teal-bright); font-weight:600;">37%</div>
+          <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-top:6px;">CURRENT (2024)</div>
+        </div>
+        <div style="width:120px; height:2px; background:linear-gradient(90deg, var(--teal), var(--rust)); margin-top:-26px;"></div>
+        <div style="text-align:center; padding:0 56px;">
+          <div style="font-family:var(--f-display); font-size:58px; color:var(--rust-bright); font-weight:600;">23 pts</div>
+          <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-top:6px;">GAP TO CLOSE</div>
+        </div>
+        <div style="width:120px; height:2px; background:linear-gradient(90deg, var(--rust), var(--gold)); margin-top:-26px;"></div>
+        <div style="text-align:center; padding:0 56px;">
+          <div style="font-family:var(--f-display); font-size:58px; color:var(--gold-bright); font-weight:600;">60%</div>
+          <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-top:6px;">TARGET (2027)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">06 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 07 — OBJECTIVES & 4 DELIVERABLES
+     ============================================================ -->
+<section class="slide" id="slide-7" data-slide="7">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>04 &middot; OBJECTIVES &amp; DELIVERABLES</div>
+    <h2 class="section-title reveal d2">Four deliverables.<br>One <span class="accent">framework</span>.</h2>
+    <p class="subtitle reveal d3" style="margin-top:14px; max-width:1300px;">The core objective: build a data-driven BI framework that diagnoses recycling bottlenecks from collection to sorting to processing, identifies exactly where value is lost in the pipeline, and quantifies the interventions with the highest impact per unit of investment.</p>
+
+    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:24px; margin-top:48px;">
+      <div class="card reveal d4" style="padding:32px;">
+        <div class="numtag">01</div>
+        <h3 style="font-size:23px; margin-top:12px;">Power BI Dashboard</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); margin:8px 0 14px;">.PBIX &middot; ~1 MB</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.55;">Three interactive dashboard pages with cross-page filtering, drill-through, and geographic heat maps.</p>
+      </div>
+      <div class="card reveal d5" style="padding:32px;">
+        <div class="numtag">02</div>
+        <h3 style="font-size:23px; margin-top:12px;">Research Paper</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); margin:8px 0 14px;">.PDF &middot; IEEE FORMAT</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.55;">Full academic documentation: methodology, findings, and strategic recommendations.</p>
+      </div>
+      <div class="card reveal d6" style="padding:32px;">
+        <div class="numtag">03</div>
+        <h3 style="font-size:23px; margin-top:12px;">Presentation Slides</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); margin:8px 0 14px;">.PPTX</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.55;">Full capstone showcase slide deck built for stakeholder presentations.</p>
+      </div>
+      <div class="card reveal d7" style="padding:32px;">
+        <div class="numtag">04</div>
+        <h3 style="font-size:23px; margin-top:12px;">Data Pipeline</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); margin:8px 0 14px;">.PBIX + CODE</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.55;">Reproducible Power Query transformation, fully documented end to end.</p>
+      </div>
+    </div>
+
+    <div class="reveal d8" style="margin-top:48px; display:flex; gap:14px; flex-wrap:wrap;">
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); padding:8px 16px; border:1px solid var(--hairline); border-radius:20px;">1. Diagnose bottlenecks</span>
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); padding:8px 16px; border:1px solid var(--hairline); border-radius:20px;">2. Identify where value is lost</span>
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); padding:8px 16px; border:1px solid var(--hairline); border-radius:20px;">3. Quantify highest-impact interventions</span>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">07 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 08 — PIPELINE STAGE 01: MULTI-SOURCE INGESTION
+     ============================================================ -->
+<section class="slide" id="slide-8" data-slide="8">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>05 &middot; THE BI PIPELINE</div>
+    <h2 class="section-title reveal d2">Stage 01 &mdash; <span class="accent">Multi-Source</span><br>Data Ingestion.</h2>
+
+    <div style="display:flex; gap:56px; margin-top:46px; align-items:flex-start;">
+      <div style="flex:1.1;">
+        <p class="lede reveal d3">Data is acquired from four source categories, integrated through API connections and structured database queries, with integrity validation applied at the point of entry.</p>
+        <div style="display:flex; flex-direction:column; gap:16px; margin-top:32px;">
+          <div class="reveal d4" style="display:flex; align-items:baseline; gap:16px;"><div style="font-family:var(--f-display); color:var(--gold-bright); font-size:22px; font-style:italic;">1</div><div style="color:var(--ink-soft); font-size:18px;">Operational facility records &mdash; collection volumes &amp; timelines</div></div>
+          <div class="reveal d5" style="display:flex; align-items:baseline; gap:16px;"><div style="font-family:var(--f-display); color:var(--gold-bright); font-size:22px; font-style:italic;">2</div><div style="color:var(--ink-soft); font-size:18px;">Sorting facility logs &mdash; material categorization &amp; accuracy rates</div></div>
+          <div class="reveal d6" style="display:flex; align-items:baseline; gap:16px;"><div style="font-family:var(--f-display); color:var(--gold-bright); font-size:22px; font-style:italic;">3</div><div style="color:var(--ink-soft); font-size:18px;">Processing stage records &mdash; throughput, downtime, recovery yields</div></div>
+          <div class="reveal d7" style="display:flex; align-items:baseline; gap:16px;"><div style="font-family:var(--f-display); color:var(--gold-bright); font-size:22px; font-style:italic;">4</div><div style="color:var(--ink-soft); font-size:18px;">Administrative datasets &mdash; workforce &amp; logistics</div></div>
+        </div>
+      </div>
+
+      <div class="card reveal d8" style="flex:0.9; padding:38px; align-self:stretch; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="font-family:var(--f-mono); font-size:14px; color:var(--teal); letter-spacing:.1em;">PIPELINE STAGE</div>
+          <div style="font-family:var(--f-display); font-size:42px; color:var(--ink); font-weight:600; margin-top:8px;">01 / 04</div>
+        </div>
+        <div style="margin-top:30px;">
+          <div style="font-size:15px; color:var(--ink-mute); margin-bottom:10px;">METHOD</div>
+          <div style="font-size:18px; color:var(--ink-soft);">API connections + structured database queries</div>
+        </div>
+        <div style="margin-top:24px;">
+          <div style="font-size:15px; color:var(--ink-mute); margin-bottom:10px;">VALIDATION</div>
+          <div style="font-size:18px; color:var(--ink-soft);">Integrity validation at point of entry</div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:28px;">
+          <span style="font-family:var(--f-mono); font-size:12px; color:var(--gold-bright); border:1px solid var(--card-border-strong); padding:5px 12px; border-radius:20px;">MULTI-SOURCE</span>
+          <span style="font-family:var(--f-mono); font-size:12px; color:var(--gold-bright); border:1px solid var(--card-border-strong); padding:5px 12px; border-radius:20px;">REPRODUCIBLE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">08 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 09 — PIPELINE STAGE 02: CLEANING & FEATURE ENGINEERING
+     ============================================================ -->
+<section class="slide" id="slide-9" data-slide="9">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>05 &middot; THE BI PIPELINE</div>
+    <h2 class="section-title reveal d2">Stage 02 &mdash; <span class="accent">Cleaning</span> &amp;<br>Feature Engineering.</h2>
+    <p class="lede reveal d3" style="margin-top:14px;">Performed entirely in Microsoft Power Query (M Language) &mdash; transforming raw, inconsistent source records into analysis-ready fields.</p>
+
+    <div style="display:flex; gap:40px; margin-top:42px;">
+      <div style="flex:1;">
+        <div class="reveal d4" style="font-family:var(--f-mono); font-size:15px; color:var(--gold-bright); letter-spacing:.1em; margin-bottom:16px;">OPERATIONS PERFORMED</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="card reveal d4" style="padding:18px 22px; display:flex; align-items:center; gap:14px;"><span style="color:var(--teal); font-size:20px;">&#10003;</span><span style="color:var(--ink-soft); font-size:17px;">Duplicate removal</span></div>
+          <div class="card reveal d5" style="padding:18px 22px; display:flex; align-items:center; gap:14px;"><span style="color:var(--teal); font-size:20px;">&#10003;</span><span style="color:var(--ink-soft); font-size:17px;">Categorical label standardization</span></div>
+          <div class="card reveal d6" style="padding:18px 22px; display:flex; align-items:center; gap:14px;"><span style="color:var(--teal); font-size:20px;">&#10003;</span><span style="color:var(--ink-soft); font-size:17px;">Median imputation for missing values</span></div>
+          <div class="card reveal d7" style="padding:18px 22px; display:flex; align-items:center; gap:14px;"><span style="color:var(--teal); font-size:20px;">&#10003;</span><span style="color:var(--ink-soft); font-size:17px;">UTC normalization of timestamps</span></div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div class="reveal d5" style="font-family:var(--f-mono); font-size:15px; color:var(--teal); letter-spacing:.1em; margin-bottom:16px;">DERIVED FEATURES CREATED</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="card reveal d5" style="padding:18px 22px; border-color:var(--card-border-strong);"><span style="color:var(--gold-bright); font-size:17px; font-weight:600;">Collection efficiency ratios</span></div>
+          <div class="card reveal d6" style="padding:18px 22px; border-color:var(--card-border-strong);"><span style="color:var(--gold-bright); font-size:17px; font-weight:600;">Sorting accuracy percentages</span></div>
+          <div class="card reveal d7" style="padding:18px 22px; border-color:var(--card-border-strong);"><span style="color:var(--gold-bright); font-size:17px; font-weight:600;">Downtime duration aggregates</span></div>
+        </div>
+
+        <div class="card reveal d8" style="margin-top:24px; padding:20px 22px; background:rgba(0,0,0,0.25);">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); margin-bottom:8px;">SOURCE FILE</div>
+          <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-soft);">egypt_waste_observational_data_2021_to_2025.csv</div>
+          <div style="display:flex; gap:24px; margin-top:12px; font-family:var(--f-mono); font-size:13px; color:var(--ink-mute);">
+            <span>COLUMNS: 25</span><span>ENCODING: UTF-8</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">09 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 — STAR SCHEMA (live SVG diagram)
+     ============================================================ -->
+<section class="slide" id="slide-10" data-slide="10">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>05 &middot; THE BI PIPELINE</div>
+    <h2 class="section-title reveal d2">Stage 03 &mdash; Dimensional<br>Architecture: the <span class="accent-gold">Star Schema</span>.</h2>
+    <p class="lede reveal d3" style="margin-top:10px;">One central fact table &mdash; <strong style="color:var(--ink);">ProcessingEvents</strong> &mdash; surrounded by four dimension tables, giving every processed ton a time, a facility, a material, and an operator.</p>
+
+    <div style="margin-top:18px; display:flex; justify-content:center;">
+      <svg width="1280" height="540" viewBox="0 0 1280 540">
+        <!-- connecting lines drawn first -->
+        <g class="draw-line" stroke="var(--gold-dim)" stroke-width="2" fill="none">
+          <line x1="640" y1="270" x2="640" y2="100"/>
+          <line x1="640" y1="270" x2="370" y2="130"/>
+          <line x1="640" y1="270" x2="910" y2="130"/>
+          <line x1="640" y1="270" x2="370" y2="420"/>
+          <line x1="640" y1="270" x2="910" y2="420"/>
+        </g>
+
+        <!-- fact table center -->
+        <g class="pop-in">
+          <rect x="500" y="218" width="280" height="104" rx="6" fill="rgba(31,216,180,0.10)" stroke="var(--teal)" stroke-width="2"/>
+          <text x="640" y="252" text-anchor="middle" font-family="JetBrains Mono" font-size="14" fill="var(--teal-bright)" letter-spacing="1">FACT TABLE</text>
+          <text x="640" y="282" text-anchor="middle" font-family="Sora" font-size="22" font-weight="700" fill="var(--ink)">ProcessingEvents</text>
+          <text x="640" y="306" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="var(--ink-mute)">VolumeTons &middot; DowntimeHours &middot; ContaminationPct</text>
+        </g>
+
+        <!-- DimTime -->
+        <g class="pop-in">
+          <rect x="500" y="50" width="280" height="80" rx="6" fill="rgba(201,162,60,0.08)" stroke="var(--gold)" stroke-width="1.5"/>
+          <text x="640" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="var(--gold-bright)">DIMENSION</text>
+          <text x="640" y="104" text-anchor="middle" font-family="Sora" font-size="19" font-weight="600" fill="var(--ink)">DimTime</text>
+          <text x="640" y="122" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-mute)">Date &middot; WeekNo &middot; Season</text>
+        </g>
+        <!-- DimFacility -->
+        <g class="pop-in">
+          <rect x="230" y="80" width="280" height="80" rx="6" fill="rgba(201,162,60,0.08)" stroke="var(--gold)" stroke-width="1.5"/>
+          <text x="370" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="var(--gold-bright)">DIMENSION</text>
+          <text x="370" y="134" text-anchor="middle" font-family="Sora" font-size="19" font-weight="600" fill="var(--ink)">DimFacility</text>
+          <text x="370" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-mute)">Location &middot; Region &middot; Capacity</text>
+        </g>
+        <!-- DimMaterial -->
+        <g class="pop-in">
+          <rect x="770" y="80" width="280" height="80" rx="6" fill="rgba(201,162,60,0.08)" stroke="var(--gold)" stroke-width="1.5"/>
+          <text x="910" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="var(--gold-bright)">DIMENSION</text>
+          <text x="910" y="134" text-anchor="middle" font-family="Sora" font-size="19" font-weight="600" fill="var(--ink)">DimMaterial</text>
+          <text x="910" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-mute)">MaterialType &middot; BaseMarketValue</text>
+        </g>
+        <!-- DimOperator -->
+        <g class="pop-in">
+          <rect x="230" y="380" width="280" height="80" rx="6" fill="rgba(201,162,60,0.08)" stroke="var(--gold)" stroke-width="1.5"/>
+          <text x="370" y="408" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="var(--gold-bright)">DIMENSION</text>
+          <text x="370" y="434" text-anchor="middle" font-family="Sora" font-size="19" font-weight="600" fill="var(--ink)">DimOperator</text>
+          <text x="370" y="452" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-mute)">ShiftName &middot; ExperienceLevel</text>
+        </g>
+        <!-- a 5th conceptual slot acknowledging "5 dimensions" tag from docs (DimGovernorate/Region context) -->
+        <g class="pop-in">
+          <rect x="770" y="380" width="280" height="80" rx="6" fill="rgba(201,162,60,0.08)" stroke="var(--gold)" stroke-width="1.5"/>
+          <text x="910" y="408" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="var(--gold-bright)">DIMENSION</text>
+          <text x="910" y="434" text-anchor="middle" font-family="Sora" font-size="19" font-weight="600" fill="var(--ink)">DimGeography</text>
+          <text x="910" y="452" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-mute)">Governorate &middot; Planning Region</text>
+        </g>
+
+        <g font-family="JetBrains Mono" font-size="13" fill="var(--ink-faint)">
+          <text x="615" y="195">1:*</text><text x="500" y="195">1:*</text><text x="780" y="195">1:*</text>
+          <text x="500" y="350">1:*</text><text x="780" y="350">1:*</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">10 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 11 — PIPELINE STAGE 04: DASHBOARD ARCHITECTURE
+     ============================================================ -->
+<section class="slide" id="slide-11" data-slide="11">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>05 &middot; THE BI PIPELINE</div>
+    <h2 class="section-title reveal d2">Stage 04 &mdash; Interactive<br><span class="accent">Dashboard</span> Architecture.</h2>
+    <p class="lede reveal d3" style="margin-top:10px;">Built in Microsoft Power BI Desktop using a data-storytelling methodology across three dashboard pages, with cross-page synchronized slicers and drill-through to granular incident records.</p>
+
+    <div style="display:flex; gap:30px; margin-top:46px;">
+      <div class="card reveal d4" style="flex:1; padding:34px;">
+        <div class="numtag">PAGE 1</div>
+        <h3 style="font-size:25px; margin-top:12px;">Executive Summary</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); margin:8px 0 14px;">AUDIENCE: SENIOR LEADERSHIP</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.6;">Aggregate KPI cards with trend sparklines for collection efficiency, sorting accuracy, material recovery rate, and total downtime. Geographic heat map of facility-level performance variance.</p>
+      </div>
+      <div class="card reveal d5" style="flex:1; padding:34px;">
+        <div class="numtag">PAGE 2</div>
+        <h3 style="font-size:25px; margin-top:12px;">Downtime &amp; Operational Analysis</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--rust-bright); margin:8px 0 14px;">AUDIENCE: OPERATIONS MANAGERS</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.6;">Pareto chart of downtime root causes. Duration timelines by facility and cause category, with drill-through to individual incident records.</p>
+      </div>
+      <div class="card reveal d6" style="flex:1; padding:34px;">
+        <div class="numtag">PAGE 3</div>
+        <h3 style="font-size:25px; margin-top:12px;">Operator &amp; Resource Performance</h3>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); margin:8px 0 14px;">AUDIENCE: FACILITY SUPERVISORS</div>
+        <p style="font-size:16px; color:var(--ink-soft); line-height:1.6;">Scatter plots of operator tenure vs. throughput. Matrix visuals for cross-cohort comparison; performance broken down by shift and material type.</p>
+      </div>
+    </div>
+
+    <div class="reveal d7" style="display:flex; gap:10px; margin-top:36px; flex-wrap:wrap;">
+      <span style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); border:1px solid var(--hairline); padding:7px 14px; border-radius:18px;">POWER BI DESKTOP</span>
+      <span style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); border:1px solid var(--hairline); padding:7px 14px; border-radius:18px;">3 DASHBOARD PAGES</span>
+      <span style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); border:1px solid var(--hairline); padding:7px 14px; border-radius:18px;">DAX MEASURES</span>
+      <span style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); border:1px solid var(--hairline); padding:7px 14px; border-radius:18px;">CROSS-PAGE FILTERS</span>
+      <span style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); border:1px solid var(--hairline); padding:7px 14px; border-radius:18px;">DRILL-THROUGH</span>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">11 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 12 — DASHBOARD PAGE 1 TOUR: EXECUTIVE SUMMARY
+     ============================================================ -->
+<section class="slide" id="slide-12" data-slide="12">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>06 &middot; THE POWER BI DASHBOARD</div>
+    <h2 class="section-title reveal d2">Page 1 &mdash; <span class="accent">Executive</span> Summary</h2>
+    <p class="subtitle reveal d3" style="margin-top:10px;">National Waste Performance, plotted live: recycling growth trajectory against the 2030 target, with the average monthly waste figure that anchors every governorate comparison in the deck.</p>
+
+    <div style="display:flex; gap:40px; margin-top:34px; align-items:flex-end;">
+      <!-- gauge: 31.20% of 60% target -->
+      <div class="card reveal d4" style="padding:30px; width:300px; text-align:center;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em;">2030 RECYCLING RATE TARGET</div>
+        <svg width="220" height="140" viewBox="0 0 220 140" style="margin-top:10px;">
+          <path d="M20,120 A90,90 0 0 1 200,120" fill="none" stroke="rgba(232,240,234,0.12)" stroke-width="18" stroke-linecap="round"/>
+          <path class="draw-line" d="M20,120 A90,90 0 0 1 113,30.3" fill="none" stroke="var(--teal)" stroke-width="18" stroke-linecap="round" stroke-dasharray="300" stroke-dashoffset="0"/>
+          <text x="110" y="98" text-anchor="middle" font-family="Fraunces" font-size="34" font-weight="600" fill="var(--ink)">31.2%</text>
+        </svg>
+        <div style="display:flex; justify-content:space-between; font-family:var(--f-mono); font-size:12px; color:var(--ink-faint); padding:0 14px;"><span>0%</span><span>60%</span></div>
+      </div>
+
+      <!-- avg waste tile -->
+      <div class="card reveal d5" style="padding:30px; width:260px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em;">MAX RECYCLING RATE</div>
+        <div style="font-family:var(--f-display); font-size:46px; color:var(--teal-bright); font-weight:600; margin-top:10px;">31.20%</div>
+        <div class="hairline" style="margin:20px 0;"></div>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em;">AVG. WASTE (TONS)</div>
+        <div style="font-family:var(--f-display); font-size:38px; color:var(--gold-bright); font-weight:600; margin-top:10px;">841.71K</div>
+      </div>
+
+      <!-- recycling growth trajectory mini line chart from dashboard page 2 of the BI -->
+      <svg class="reveal d6" width="620" height="260" viewBox="0 0 620 260">
+        <text x="0" y="22" font-family="Sora" font-size="17" font-weight="600" fill="var(--ink)">Recycling Growth Trajectory</text>
+        <g stroke="rgba(232,240,234,0.08)"><line x1="40" y1="220" x2="600" y2="220"/></g>
+        <polyline class="draw-line" points="40,205 100,178 160,190 220,182 280,165 340,150 400,135 460,108 520,95 580,55"
+          fill="none" stroke="var(--teal)" stroke-width="3" stroke-linecap="round"/>
+        <g font-family="JetBrains Mono" font-size="12" fill="var(--ink-mute)">
+          <text x="40" y="238">2021</text><text x="580" y="238" text-anchor="end">2025</text>
+        </g>
+        <g font-family="Sora" font-size="13" fill="var(--ink-soft)">
+          <text x="40" y="196">18.05%</text>
+          <text x="580" y="45" text-anchor="end" fill="var(--teal-bright)">29.99%</text>
+        </g>
+      </svg>
+    </div>
+
+    <p class="reveal d7" style="margin-top:34px; font-size:16px; color:var(--ink-mute); max-width:1300px; line-height:1.6;">Each KPI tile and chart element on the live dashboard carries hover/click drill-through hotspots, surfacing deeper analytical context &mdash; from a single national gauge down to a single governorate's monthly record.</p>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">12 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 13 — DASHBOARD PAGE 2 TOUR: DOWNTIME & OPERATIONS
+     ============================================================ -->
+<section class="slide" id="slide-13" data-slide="13">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>06 &middot; THE POWER BI DASHBOARD</div>
+    <h2 class="section-title reveal d2">Page 2 &mdash; <span class="accent" style="color:var(--rust-bright);">Downtime</span> &amp; Operational Analysis</h2>
+    <p class="subtitle reveal d3" style="margin-top:10px;">Operational Downtime by Root Cause &mdash; a Pareto view built directly from incident logs, showing exactly where lost processing hours originate.</p>
+
+    <div style="display:flex; gap:60px; margin-top:40px; align-items:center;">
+      <!-- horizontal pareto bar chart -->
+      <svg width="980" height="380" viewBox="0 0 980 380">
+        <!-- Mechanical Failure 34, Feedstock Contamination 21, Staffing Gaps 18, Other 15, Maintenance Overruns 12 -->
+        <g font-family="Sora" font-size="17" fill="var(--ink-soft)">
+          <text x="0" y="32">Mechanical Failure</text>
+          <text x="0" y="100">Feedstock Contamination</text>
+          <text x="0" y="168">Staffing Gaps</text>
+          <text x="0" y="236">Other Causes</text>
+          <text x="0" y="304">Maintenance Overruns</text>
+        </g>
+        <g transform="translate(330,0)">
+          <rect class="grow-bar" y="10" width="544" height="36" rx="3" fill="var(--rust)"/>
+          <rect class="grow-bar" y="78" width="336" height="36" rx="3" fill="var(--amber)"/>
+          <rect class="grow-bar" y="146" width="288" height="36" rx="3" fill="var(--gold)"/>
+          <rect class="grow-bar" y="214" width="240" height="36" rx="3" fill="var(--teal-dim)"/>
+          <rect class="grow-bar" y="282" width="192" height="36" rx="3" fill="rgba(31,216,180,0.35)"/>
+          <text x="554" y="34" font-family="Fraunces" font-weight="600" font-size="22" fill="var(--rust-bright)">34%</text>
+          <text x="346" y="102" font-family="Fraunces" font-weight="600" font-size="22" fill="var(--amber)">21%</text>
+          <text x="298" y="170" font-family="Fraunces" font-weight="600" font-size="22" fill="var(--gold-bright)">18%</text>
+          <text x="250" y="238" font-family="Fraunces" font-weight="600" font-size="22" fill="var(--teal-bright)">15%</text>
+          <text x="202" y="306" font-family="Fraunces" font-weight="600" font-size="22" fill="var(--teal-bright)">12%</text>
+        </g>
+      </svg>
+
+      <div style="flex:0 0 380px; display:flex; flex-direction:column; gap:20px;">
+        <div class="card reveal d5" style="padding:26px; border-color:var(--rust);">
+          <div style="font-family:var(--f-display); font-size:42px; color:var(--rust-bright); font-weight:600;">67%</div>
+          <div style="font-size:15px; color:var(--ink-soft); margin-top:8px;">of all downtime traces to just the <strong>top 3 causes</strong>: mechanical failure, contamination, and maintenance overruns.</div>
+        </div>
+        <div class="card reveal d6" style="padding:26px;">
+          <div style="font-size:15px; color:var(--ink-soft); line-height:1.6;">Duration timelines break down further by <strong style="color:var(--ink);">facility</strong> and <strong style="color:var(--ink);">cause category</strong>, with drill-through to individual incident records for root-cause investigation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">13 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 14 — DASHBOARD PAGE 3 TOUR: OPERATOR PERFORMANCE
+     ============================================================ -->
+<section class="slide" id="slide-14" data-slide="14">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>06 &middot; THE POWER BI DASHBOARD</div>
+    <h2 class="section-title reveal d2">Page 3 &mdash; <span class="accent-gold">Operator</span> &amp; Resource Performance</h2>
+    <p class="subtitle reveal d3" style="margin-top:10px;">Shift Throughput Matrix &mdash; comparing Shift A against Shift B &mdash; alongside a facility performance gap gauge used to flag statistical outliers.</p>
+
+    <div style="display:flex; gap:50px; margin-top:40px;">
+      <!-- shift comparison bars -->
+      <div class="card reveal d4" style="flex:1; padding:34px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:24px;">SHIFT THROUGHPUT MATRIX</div>
+        <svg width="100%" height="220" viewBox="0 0 560 220">
+          <g font-family="Sora" font-size="16" fill="var(--ink-soft)">
+            <text x="0" y="36">Shift A</text>
+            <text x="0" y="116">Shift B</text>
+          </g>
+          <g transform="translate(110,0)">
+            <rect class="grow-bar" y="10" width="380" height="40" rx="4" fill="var(--teal)"/>
+            <rect class="grow-bar" y="90" width="300" height="40" rx="4" fill="var(--gold-dim)"/>
+            <text x="390" y="36" font-family="Fraunces" font-size="20" fill="var(--teal-bright)" font-weight="600">Higher</text>
+            <text x="310" y="116" font-family="Fraunces" font-size="20" fill="var(--gold-bright)" font-weight="600">Baseline</text>
+          </g>
+          <g font-family="JetBrains Mono" font-size="12" fill="var(--ink-faint)">
+            <text x="0" y="180">Throughput compared across cohorts, materials, and tenure bands.</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- operator tenure vs throughput scatter -->
+      <div class="card reveal d5" style="flex:1; padding:34px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:18px;">OPERATOR TENURE VS. THROUGHPUT</div>
+        <svg width="100%" height="220" viewBox="0 0 560 220">
+          <g stroke="rgba(232,240,234,0.1)"><line x1="40" y1="190" x2="540" y2="190"/><line x1="40" y1="20" x2="40" y2="190"/></g>
+          <g class="pop-in" fill="var(--teal-bright)" opacity="0.85">
+            <circle cx="80" cy="160" r="6"/><circle cx="120" cy="140" r="7"/><circle cx="170" cy="150" r="5"/>
+            <circle cx="220" cy="110" r="8"/><circle cx="260" cy="120" r="6"/><circle cx="310" cy="90" r="9"/>
+            <circle cx="360" cy="75" r="7"/><circle cx="400" cy="60" r="10"/><circle cx="450" cy="50" r="8"/>
+            <circle cx="500" cy="40" r="11"/>
+          </g>
+          <text x="40" y="210" font-family="JetBrains Mono" font-size="12" fill="var(--ink-faint)">TENURE &#8594;</text>
+          <text x="20" y="20" font-family="JetBrains Mono" font-size="12" fill="var(--ink-faint)" transform="rotate(-90 20 20)">THROUGHPUT &#8594;</text>
+        </svg>
+      </div>
+    </div>
+
+    <p class="reveal d6" style="margin-top:30px; font-size:16px; color:var(--ink-mute); max-width:1300px;">Facility-level outlier flags are computed statistically &mdash; any facility more than 1.5 standard deviations from the portfolio mean recovery rate is marked for review, whether underperforming or a star performer worth studying.</p>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">14 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 15 — KEY FINDING 01: COLLECTION EFFICIENCY
+     ============================================================ -->
+<section class="slide" id="slide-15" data-slide="15">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>07 &middot; KEY ANALYTICAL FINDINGS</div>
+    <h2 class="section-title reveal d2">Finding 01 &mdash; Collection Efficiency:<br><span class="accent">73% mean</span>, high variance.</h2>
+
+    <div style="display:flex; gap:60px; margin-top:50px; align-items:center;">
+      <div class="pop-in" style="flex:0 0 280px; text-align:center;">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <circle cx="130" cy="130" r="108" fill="none" stroke="rgba(232,240,234,0.1)" stroke-width="20"/>
+          <circle class="draw-line" cx="130" cy="130" r="108" fill="none" stroke="var(--teal)" stroke-width="20"
+            stroke-dasharray="494 678" stroke-dashoffset="0" transform="rotate(-90 130 130)" stroke-linecap="round"/>
+          <text x="130" y="142" text-anchor="middle" font-family="Fraunces" font-size="52" font-weight="600" fill="var(--ink)">73%</text>
+        </svg>
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-top:8px;">AVG COLLECTION EFFICIENCY</div>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
+        <div class="reveal d4" style="display:flex; gap:18px; align-items:flex-start;"><span style="color:var(--gold-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:19px; color:var(--ink-soft); margin:0; line-height:1.55;">Vehicle availability was the primary constraint &mdash; not workforce capacity.</p></div>
+        <div class="reveal d5" style="display:flex; gap:18px; align-items:flex-start;"><span style="color:var(--gold-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:19px; color:var(--ink-soft); margin:0; line-height:1.55;">Performance troughs recur at the start of each calendar week (Monday) and during peak summer months.</p></div>
+        <div class="reveal d6" style="display:flex; gap:18px; align-items:flex-start;"><span style="color:var(--gold-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:19px; color:var(--ink-soft); margin:0; line-height:1.55;">Root cause: fleet maintenance scheduling combined with heat-related vehicle failures.</p></div>
+        <div class="card reveal d7" style="margin-top:6px; padding:20px 26px; border-color:var(--card-border-strong);">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.05em;">IMPLICATION</span>
+          <p style="margin:8px 0 0; font-size:18px; color:var(--ink);">Software-only route optimization can recover 8&ndash;12 efficiency points with zero capital investment &mdash; see Recommendation 03.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">15 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 16 — KEY FINDING 02: SORTING ACCURACY 2.3x MULTIPLIER
+     ============================================================ -->
+<section class="slide" id="slide-16" data-slide="16">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>07 &middot; KEY ANALYTICAL FINDINGS</div>
+    <h2 class="section-title reveal d2">Finding 02 &mdash; Sorting Accuracy<br>Drives <span class="accent-gold">Everything</span> Downstream.</h2>
+
+    <div style="display:flex; gap:60px; margin-top:42px; align-items:center;">
+      <!-- multiplier bar visual: 1% accuracy -> 2.3% marketable material -->
+      <svg width="680" height="320" viewBox="0 0 680 320">
+        <g font-family="Sora" font-size="17" fill="var(--ink-soft)">
+          <text x="0" y="40">+1% Sorting Accuracy</text>
+          <text x="0" y="220">+2.3% Marketable Material</text>
+        </g>
+        <rect class="grow-bar" x="0" y="60" width="180" height="50" rx="4" fill="var(--teal-dim)"/>
+        <text x="190" y="94" font-family="Fraunces" font-size="24" fill="var(--teal-bright)" font-weight="600">+1%</text>
+
+        <text x="0" y="170" font-family="Fraunces" font-style="italic" font-size="28" fill="var(--gold-bright)">&times; 2.3 multiplier</text>
+
+        <rect class="grow-bar" x="0" y="210" width="414" height="50" rx="4" fill="var(--gold)"/>
+        <text x="424" y="244" font-family="Fraunces" font-size="24" fill="var(--gold-bright)" font-weight="600">+2.3%</text>
+        <text x="0" y="290" font-family="JetBrains Mono" font-size="13" fill="var(--ink-faint)">Every 1pt of sorting accuracy compounds into 2.3pts of recovered marketable material.</text>
+      </svg>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:22px;">
+        <div class="card reveal d4" style="padding:26px;">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--rust-bright);">STATISTICAL RESULT</span>
+          <p style="margin:10px 0 0; font-size:18px; color:var(--ink-soft); line-height:1.55;">Bivariate analysis confirms a statistically significant <strong style="color:var(--ink);">negative correlation</strong> between sorting accuracy and downstream material contamination.</p>
+        </div>
+        <div class="card reveal d5" style="padding:26px; border-color:var(--card-border-strong);">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright);">CONCLUSION</span>
+          <p style="margin:10px 0 0; font-size:20px; color:var(--ink); line-height:1.5; font-weight:500;">Front-end sorting quality is the <em style="color:var(--gold-bright); font-style:italic;">highest-ROI investment</em> in the entire system.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">16 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 17 — KEY FINDING 03: DOWNTIME DISTRIBUTION SKEWED
+     ============================================================ -->
+<section class="slide" id="slide-17" data-slide="17">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>07 &middot; KEY ANALYTICAL FINDINGS</div>
+    <h2 class="section-title reveal d2">Finding 03 &mdash; Downtime is<br><span style="color:var(--rust-bright);">Highly Skewed</span>, Not Evenly Spread.</h2>
+
+    <div style="display:flex; gap:54px; margin-top:36px; align-items:center;">
+      <!-- right-skewed distribution curve -->
+      <svg width="700" height="340" viewBox="0 0 700 340">
+        <g stroke="rgba(232,240,234,0.08)"><line x1="40" y1="280" x2="660" y2="280"/></g>
+        <path class="draw-line" d="M40,278 C90,275 130,260 165,210 C195,168 215,120 245,95 C275,72 310,65 345,75 C390,88 430,130 480,200 C530,250 590,272 660,278"
+          fill="none" stroke="var(--rust)" stroke-width="3.5"/>
+        <path d="M40,278 C90,275 130,260 165,210 C195,168 215,120 245,95 C275,72 310,65 345,75 C390,88 430,130 480,200 C530,250 590,272 660,278 L660,280 L40,280 Z"
+          fill="var(--rust)" opacity="0.08"/>
+        <line x1="270" y1="60" x2="270" y2="280" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="5 5"/>
+        <text x="270" y="44" text-anchor="middle" font-family="Sora" font-size="14" fill="var(--gold-bright)">Most events: small, frequent</text>
+        <text x="560" y="248" text-anchor="middle" font-family="Sora" font-size="14" fill="var(--rust-bright)">Long tail: rare, catastrophic failures</text>
+        <text x="350" y="318" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="var(--ink-faint)">DOWNTIME DURATION DISTRIBUTION (UNIVARIATE)</text>
+      </svg>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
+        <div class="reveal d4" style="display:flex; gap:16px;"><span style="color:var(--rust-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:18px; color:var(--ink-soft); margin:0; line-height:1.55;">Univariate analysis reveals a <strong style="color:var(--ink);">right-skewed distribution</strong> in downtime duration.</p></div>
+        <div class="reveal d5" style="display:flex; gap:16px;"><span style="color:var(--rust-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:18px; color:var(--ink-soft); margin:0; line-height:1.55;">A small number of high-magnitude mechanical failure events cause disproportionately large losses.</p></div>
+        <div class="reveal d6" style="display:flex; gap:16px;"><span style="color:var(--rust-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:18px; color:var(--ink-soft); margin:0; line-height:1.55;">Routine minor delays are far more frequent &mdash; but far less impactful in aggregate.</p></div>
+        <div class="card reveal d7" style="padding:20px 24px; border-color:var(--card-border-strong); margin-top:6px;"><span style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright);">CONCLUSION</span><p style="margin:8px 0 0; font-size:18px; color:var(--ink);">Predictive maintenance is the primary intervention target.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">17 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 18 — KEY FINDING 04: 40%+ FACILITY GAP
+     ============================================================ -->
+<section class="slide" id="slide-18" data-slide="18">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>07 &middot; KEY ANALYTICAL FINDINGS</div>
+    <h2 class="section-title reveal d2">Finding 04 &mdash; A <span class="accent-gold">40%+ Gap</span><br>Between Best and Average.</h2>
+
+    <div style="display:flex; gap:60px; margin-top:46px; align-items:center;">
+      <svg width="560" height="320" viewBox="0 0 560 320">
+        <g font-family="Sora" font-size="17" fill="var(--ink-soft)">
+          <text x="0" y="80">Top-Performing<br/>Facilities</text>
+          <text x="0" y="68">Top-Performing Facilities</text>
+          <text x="0" y="220">Portfolio Average</text>
+        </g>
+        <rect class="grow-bar" x="280" y="40" width="240" height="56" rx="4" fill="var(--teal)"/>
+        <rect class="grow-bar" x="280" y="190" width="160" height="56" rx="4" fill="var(--gold-dim)"/>
+        <text x="530" y="74" text-anchor="end" font-family="Fraunces" font-size="22" fill="var(--teal-bright)" font-weight="600">Recovery Rate</text>
+        <text x="450" y="224" text-anchor="end" font-family="Fraunces" font-size="22" fill="var(--gold-bright)" font-weight="600">Baseline</text>
+        <path d="M520,68 L520,246" stroke="var(--rust-bright)" stroke-width="2" stroke-dasharray="5 5"/>
+        <text x="528" y="160" font-family="Fraunces" font-size="26" font-weight="700" fill="var(--rust-bright)">40%+ gap</text>
+      </svg>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:20px;">
+        <div class="reveal d4" style="display:flex; gap:16px;"><span style="color:var(--gold-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:19px; color:var(--ink-soft); margin:0; line-height:1.55;">Top-performing facilities achieve recovery rates <strong style="color:var(--ink);">40%+ above</strong> the portfolio mean.</p></div>
+        <div class="reveal d5" style="display:flex; gap:16px;"><span style="color:var(--gold-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:19px; color:var(--ink-soft); margin:0; line-height:1.55;">This gap is <strong style="color:var(--ink);">not</strong> explained by capital differences between facilities.</p></div>
+        <div class="reveal d6" style="display:flex; gap:16px;"><span style="color:var(--gold-bright); font-family:var(--f-display); font-style:italic; font-size:24px;">&rarr;</span><p style="font-size:19px; color:var(--ink-soft); margin:0; line-height:1.55;">It reflects operational practices, shift management, and sorting procedures &mdash; things people, not budgets, determine.</p></div>
+        <div class="card reveal d7" style="padding:20px 26px; border-color:var(--card-border-strong); margin-top:4px;"><span style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright);">CONCLUSION</span><p style="margin:8px 0 0; font-size:18px; color:var(--ink);">Best-practice dissemination is a zero-capital intervention with high potential.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">18 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 19 — ANALYSIS TAB 1: NATIONAL WASTE PERFORMANCE (top 10 governorates bar chart)
+     ============================================================ -->
+<section class="slide" id="slide-19" data-slide="19">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>08 &middot; DASHBOARD DEEP-DIVE</div>
+    <h2 class="section-title reveal d2">Tab 1 &mdash; National <span class="accent">Waste Performance</span></h2>
+
+    <div style="display:flex; gap:18px; margin-top:24px;">
+      <div class="card reveal d3" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:34px; color:var(--teal-bright); font-weight:600;">76.3k</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">AVG GOVERNORATE MSW (TONS/MO)</div></div>
+      <div class="card reveal d4" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:34px; color:var(--gold-bright); font-weight:600;">Cairo</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">HIGHEST MSW PRODUCER &middot; 279.7K</div></div>
+      <div class="card reveal d5" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:34px; color:var(--ink); font-weight:600;">55.8%</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">ORGANIC WASTE FRACTION</div></div>
+      <div class="card reveal d6" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:34px; color:var(--rust-bright); font-weight:600;">15.96%</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">MEAN RECYCLING RATE (BASELINE)</div></div>
+    </div>
+
+    <div style="margin-top:34px;">
+      <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:10px;">TOP 10 GOVERNORATES BY MONTHLY MSW GENERATION (TONS/MONTH)</div>
+      <svg width="100%" height="380" viewBox="0 0 1680 380">
+        <!-- bars: Cairo 279780, Giza 255334, Alexandria 158604, Sharqia 117707, Dakahlia 105634, Beheira 101107, Minya 93562, Qalyubia 90544, Sohag 82999, Gharbia 79980 -->
+        <!-- scale: max 280000 -> 300px height; bar width 130, gap 38 -->
+        <g font-family="Sora" font-size="15" fill="var(--ink-soft)" text-anchor="middle">
+          <text x="84" y="368">Cairo</text><text x="252" y="368">Giza</text><text x="420" y="368">Alex.</text>
+          <text x="588" y="368">Sharqia</text><text x="756" y="368">Dakahlia</text><text x="924" y="368">Beheira</text>
+          <text x="1092" y="368">Minya</text><text x="1260" y="368">Qalyubia</text><text x="1428" y="368">Sohag</text><text x="1596" y="368">Gharbia</text>
+        </g>
+        <g>
+          <rect class="grow-bar-v" x="34" y="30" width="100" height="300" rx="3" fill="var(--teal)"/>
+          <rect class="grow-bar-v" x="202" y="56" width="100" height="274" rx="3" fill="var(--teal)" opacity="0.92"/>
+          <rect class="grow-bar-v" x="370" y="160" width="100" height="170" rx="3" fill="var(--teal-dim)"/>
+          <rect class="grow-bar-v" x="538" y="203" width="100" height="127" rx="3" fill="var(--teal-dim)"/>
+          <rect class="grow-bar-v" x="706" y="217" width="100" height="113" rx="3" fill="var(--gold-dim)"/>
+          <rect class="grow-bar-v" x="874" y="222" width="100" height="108" rx="3" fill="var(--gold-dim)"/>
+          <rect class="grow-bar-v" x="1042" y="230" width="100" height="100" rx="3" fill="var(--gold-dim)"/>
+          <rect class="grow-bar-v" x="1210" y="233" width="100" height="97" rx="3" fill="var(--gold-dim)"/>
+          <rect class="grow-bar-v" x="1378" y="241" width="100" height="89" rx="3" fill="rgba(201,162,60,0.45)"/>
+          <rect class="grow-bar-v" x="1546" y="242" width="100" height="88" rx="3" fill="rgba(201,162,60,0.45)"/>
+        </g>
+        <g font-family="JetBrains Mono" font-size="14" fill="var(--ink)" text-anchor="middle">
+          <text x="84" y="22">279,780</text><text x="252" y="48">255,334</text><text x="420" y="152">158,604</text>
+          <text x="588" y="195">117,707</text><text x="756" y="209">105,634</text><text x="924" y="214">101,107</text>
+          <text x="1092" y="222">93,562</text><text x="1260" y="225">90,544</text><text x="1428" y="233">82,999</text><text x="1596" y="234">79,980</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">19 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 20 — ANALYSIS TAB 1 CONT.: MSW COMPOSITION DONUT + MAP CALLOUT
+     ============================================================ -->
+<section class="slide" id="slide-20" data-slide="20">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>08 &middot; DASHBOARD DEEP-DIVE</div>
+    <h2 class="section-title reveal d2">Tab 1 cont. &mdash; Composition &amp; the<br><span class="accent-gold">Governorate Map</span></h2>
+
+    <div style="display:flex; gap:64px; margin-top:36px; align-items:center;">
+      <!-- donut chart: Organic 55.79 Plastic 12.89 Paper 9.72 Glass 4.33 Metal 3.63 Other 13.65 -->
+      <div style="text-align:center;">
+        <svg width="380" height="380" viewBox="0 0 380 380">
+          <g transform="translate(190,190)">
+            <!-- segments computed as stroke-dasharray on circumference 2*pi*140=879.6 -->
+            <circle r="140" fill="none" stroke="var(--teal)" stroke-width="56" stroke-dasharray="490.7 388.9" stroke-dashoffset="0" transform="rotate(-90)" class="draw-line" style="stroke-dasharray:490.7 388.9; stroke-dashoffset:0;"/>
+            <circle r="140" fill="none" stroke="var(--gold)" stroke-width="56" stroke-dasharray="113.4 766.2" stroke-dashoffset="-490.7" transform="rotate(-90)"/>
+            <circle r="140" fill="none" stroke="#5FAE6E" stroke-width="56" stroke-dasharray="85.5 794.1" stroke-dashoffset="-604.1" transform="rotate(-90)"/>
+            <circle r="140" fill="none" stroke="#8A93A6" stroke-width="56" stroke-dasharray="38.1 841.5" stroke-dashoffset="-689.6" transform="rotate(-90)"/>
+            <circle r="140" fill="none" stroke="#B97A52" stroke-width="56" stroke-dasharray="31.9 847.7" stroke-dashoffset="-727.7" transform="rotate(-90)"/>
+            <circle r="140" fill="none" stroke="#2F5C44" stroke-width="56" stroke-dasharray="120.1 759.5" stroke-dashoffset="-759.6" transform="rotate(-90)"/>
+            <text x="0" y="8" text-anchor="middle" font-family="Fraunces" font-size="30" font-weight="600" fill="var(--ink)">MSW</text>
+            <text x="0" y="32" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="var(--ink-mute)">COMPOSITION</text>
+          </g>
+        </svg>
+      </div>
+
+      <div style="flex:1; display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+        <div class="reveal d3" style="display:flex; align-items:center; gap:12px;"><span style="width:14px;height:14px;border-radius:3px;background:var(--teal);"></span><span style="color:var(--ink-soft); font-size:17px;">Organic &mdash; <strong style="color:var(--ink);">55.79%</strong></span></div>
+        <div class="reveal d4" style="display:flex; align-items:center; gap:12px;"><span style="width:14px;height:14px;border-radius:3px;background:var(--gold);"></span><span style="color:var(--ink-soft); font-size:17px;">Plastic &mdash; <strong style="color:var(--ink);">12.89%</strong></span></div>
+        <div class="reveal d4" style="display:flex; align-items:center; gap:12px;"><span style="width:14px;height:14px;border-radius:3px;background:#5FAE6E;"></span><span style="color:var(--ink-soft); font-size:17px;">Paper/Cardboard &mdash; <strong style="color:var(--ink);">9.72%</strong></span></div>
+        <div class="reveal d5" style="display:flex; align-items:center; gap:12px;"><span style="width:14px;height:14px;border-radius:3px;background:#8A93A6;"></span><span style="color:var(--ink-soft); font-size:17px;">Glass &mdash; <strong style="color:var(--ink);">4.33%</strong></span></div>
+        <div class="reveal d5" style="display:flex; align-items:center; gap:12px;"><span style="width:14px;height:14px;border-radius:3px;background:#B97A52;"></span><span style="color:var(--ink-soft); font-size:17px;">Metal &mdash; <strong style="color:var(--ink);">3.63%</strong></span></div>
+        <div class="reveal d6" style="display:flex; align-items:center; gap:12px;"><span style="width:14px;height:14px;border-radius:3px;background:#2F5C44;"></span><span style="color:var(--ink-soft); font-size:17px;">Other &mdash; <strong style="color:var(--ink);">13.65%</strong></span></div>
+
+        <div class="card reveal d7" style="grid-column: span 2; margin-top:14px; padding:22px 26px;">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--teal); letter-spacing:.05em;">INTERACTIVE MAP</span>
+          <p style="margin:8px 0 0; font-size:16px; color:var(--ink-soft); line-height:1.55;">A full SVG map of all 27 governorates is color-coded by recycling-rate intensity. Clicking any governorate &mdash; e.g. <strong style="color:var(--ink);">Cairo: 279.8k tons/mo, 17.8% recycling, 66.3% coverage, 10.1M population</strong> &mdash; opens a data card and an "AI Action Plan" button that triggers EcoBot for that region.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">20 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 21 — ANALYSIS TAB 2: INVESTMENT OPPORTUNITIES (coverage by region)
+     ============================================================ -->
+<section class="slide" id="slide-21" data-slide="21">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>08 &middot; DASHBOARD DEEP-DIVE</div>
+    <h2 class="section-title reveal d2">Tab 2 &mdash; <span class="accent-gold">Investment</span> Opportunities</h2>
+
+    <div style="display:flex; gap:18px; margin-top:24px;">
+      <div class="card reveal d3" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:32px; color:var(--teal-bright); font-weight:600;">66.3%</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">CAIRO COVERAGE PEAK</div></div>
+      <div class="card reveal d4" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:32px; color:var(--rust-bright); font-weight:600;">36.0%</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">LOWEST COVERAGE &middot; DELTA REGION</div></div>
+      <div class="card reveal d5" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:32px; color:var(--gold-bright); font-weight:600;">12.9%</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">PLASTIC FRACTION &middot; HIGH-ROI SORTING</div></div>
+      <div class="card reveal d6" style="flex:1; padding:18px; text-align:center; border-color:var(--card-border-strong);"><div style="font-family:var(--f-display); font-size:32px; color:var(--ink); font-weight:600;">HIGH</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">INVESTMENT PRIORITY</div></div>
+    </div>
+
+    <div style="display:flex; gap:50px; margin-top:34px;">
+      <div style="flex:1.2;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:14px;">WASTE COLLECTION COVERAGE BY REGION</div>
+        <svg width="100%" height="320" viewBox="0 0 900 320">
+          <g font-family="Sora" font-size="15" fill="var(--ink-soft)">
+            <text x="0" y="30">Greater Cairo</text><text x="0" y="74">Suez Canal</text><text x="0" y="118">Alexandria</text>
+            <text x="0" y="162">Delta Region</text><text x="0" y="206">North Upper Egypt</text><text x="0" y="250">Middle Upper Egypt</text><text x="0" y="294">South Upper Egypt</text>
+          </g>
+          <g transform="translate(250,0)">
+            <rect class="grow-bar" y="8" width="610" height="26" rx="3" fill="var(--teal)"/>
+            <rect class="grow-bar" y="52" width="541" height="26" rx="3" fill="var(--teal-dim)"/>
+            <rect class="grow-bar" y="96" width="469" height="26" rx="3" fill="var(--teal-dim)"/>
+            <rect class="grow-bar" y="140" width="331" height="26" rx="3" fill="var(--rust)"/>
+            <rect class="grow-bar" y="184" width="333" height="26" rx="3" fill="var(--gold-dim)"/>
+            <rect class="grow-bar" y="228" width="335" height="26" rx="3" fill="var(--gold-dim)"/>
+            <rect class="grow-bar" y="272" width="335" height="26" rx="3" fill="var(--gold-dim)"/>
+            <g font-family="JetBrains Mono" font-size="14" fill="var(--ink)">
+              <text x="620" y="28">66.34%</text><text x="551" y="72">58.86%</text><text x="479" y="116">51.04%</text>
+              <text x="341" y="160" fill="var(--rust-bright)">36.01%</text><text x="343" y="204">36.22%</text>
+              <text x="345" y="248">36.43%</text><text x="345" y="292">36.46%</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:18px;">
+        <div class="card reveal d5" style="padding:24px;">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--teal);">DRY RECYCLABLE VOLUME</span>
+          <p style="margin:8px 0 0; font-size:16px; color:var(--ink-soft); line-height:1.55;">Cairo + Giza generate <strong style="color:var(--ink);">over 500k tons</strong> of waste combined monthly &mdash; the priority locations for modern Material Recovery Facilities (MRFs).</p>
+        </div>
+        <div class="card reveal d6" style="padding:24px; border-color:var(--card-border-strong);">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--rust-bright);">INFRASTRUCTURE GAP</span>
+          <p style="margin:8px 0 0; font-size:16px; color:var(--ink-soft); line-height:1.55;">Delta and Upper Egypt have huge generation volumes but only <strong style="color:var(--ink);">~36% collection coverage</strong>. Investing in municipal collection networks here yields the largest social and environmental returns.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">21 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 22 — ANALYSIS TAB 3: RESEARCH & ANALYTICS (dual-axis line chart)
+     ============================================================ -->
+<section class="slide" id="slide-22" data-slide="22">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>08 &middot; DASHBOARD DEEP-DIVE</div>
+    <h2 class="section-title reveal d2">Tab 3 &mdash; Research &amp; <span class="accent">Analytics</span></h2>
+
+    <div style="display:flex; gap:18px; margin-top:24px;">
+      <div class="card reveal d3" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:30px; color:var(--teal-bright); font-weight:600;">Strong</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">COVERAGE-RECYCLING LINK</div></div>
+      <div class="card reveal d4" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:30px; color:var(--gold-bright); font-weight:600;">$3.7k</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">AVG GDP PER CAPITA</div></div>
+      <div class="card reveal d5" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:30px; color:var(--ink); font-weight:600;">1,620</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">DATA POINTS ANALYZED</div></div>
+      <div class="card reveal d6" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:30px; color:var(--ink); font-weight:600;">Star</div><div style="font-size:13px; color:var(--ink-mute); margin-top:4px;">DATA SCHEMA MODEL</div></div>
+    </div>
+
+    <div style="display:flex; gap:50px; margin-top:30px; align-items:flex-start;">
+      <div style="flex:1.3;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:12px;">RECYCLING RATE VS. WASTE COLLECTION COVERAGE</div>
+        <svg width="100%" height="320" viewBox="0 0 980 320">
+          <g stroke="rgba(232,240,234,0.08)"><line x1="60" y1="270" x2="940" y2="270"/></g>
+          <!-- gold = coverage (36.01->66.34), teal = recycling rate (15.91->15.97) -->
+          <polyline class="draw-line" points="100,205 280,200 460,190 640,175 820,75" fill="none" stroke="var(--gold)" stroke-width="3.5"/>
+          <polyline class="draw-line" points="100,232 280,231 460,230 640,230 820,229" fill="none" stroke="var(--teal)" stroke-width="3.5"/>
+          <g font-family="JetBrains Mono" font-size="13" fill="var(--ink-mute)" text-anchor="middle">
+            <text x="100" y="296">Delta</text><text x="280" y="296">Mid. Upper</text><text x="460" y="296">N. Upper</text>
+            <text x="640" y="296">Alexandria</text><text x="820" y="296">Greater Cairo</text>
+          </g>
+          <g font-family="Sora" font-size="14" fill="var(--gold-bright)" font-weight="600">
+            <text x="100" y="198">36.01%</text><text x="820" y="62" text-anchor="end">66.34%</text>
+          </g>
+          <g font-family="Sora" font-size="14" fill="var(--teal-bright)" font-weight="600">
+            <text x="100" y="252">15.91%</text><text x="820" y="222" text-anchor="end">15.97%</text>
+          </g>
+          <g transform="translate(700,20)" font-family="Sora" font-size="13">
+            <circle cx="0" cy="0" r="6" fill="var(--gold)"/><text x="14" y="5" fill="var(--ink-soft)">Coverage %</text>
+            <circle cx="150" cy="0" r="6" fill="var(--teal)"/><text x="164" y="5" fill="var(--ink-soft)">Recycling Rate %</text>
+          </g>
+        </svg>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:18px;">
+        <div class="card reveal d5" style="padding:24px;">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--rust-bright);">THE COLLECTION TRAP</span>
+          <p style="margin:8px 0 0; font-size:16px; color:var(--ink-soft); line-height:1.55;">Regions with low collection coverage face depressed formal recycling rates &mdash; because raw materials never enter formal processing facilities.</p>
+        </div>
+        <div class="card reveal d6" style="padding:24px;">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright);">INCOME EFFECTS</span>
+          <p style="margin:8px 0 0; font-size:16px; color:var(--ink-soft); line-height:1.55;">Higher GDP-per-capita areas yield significantly higher plastic and packaging fractions, shifting processing needs from composting toward sorting.</p>
+        </div>
+        <div class="reveal d7" style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint);">5-YEAR TIME SERIES &middot; ALL 27 GOVERNORATES &middot; 1,620 DATA POINTS VIA POWER QUERY</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">22 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 23 — REC 01: SORTING INFRASTRUCTURE PRIORITIZATION
+     ============================================================ -->
+<section class="slide" id="slide-23" data-slide="23">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>09 &middot; STRATEGIC RECOMMENDATIONS</div>
+    <div class="reveal d2" style="display:flex; align-items:baseline; gap:20px; margin-bottom:6px;">
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--canvas); background:var(--teal); padding:4px 12px; border-radius:3px; font-weight:600; letter-spacing:.05em;">HIGH IMPACT</span>
+      <span style="font-family:var(--f-mono); font-size:15px; color:var(--gold-dim); letter-spacing:.1em;">REC 01</span>
+    </div>
+    <h2 class="section-title reveal d3">Sorting Infrastructure<br><span class="accent">Prioritization</span></h2>
+
+    <div style="display:flex; gap:54px; margin-top:38px;">
+      <div style="flex:1.3; display:flex; flex-direction:column; gap:22px;">
+        <div class="reveal d4">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">DATA BASIS</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">The 2.3&times; sorting multiplier, plus a strong negative correlation between sorting accuracy and downstream contamination.</p>
+        </div>
+        <div class="reveal d5">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">ACTION</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">Invest in near-infrared (NIR) spectroscopy systems for automated material identification, plus quality-control sensors at sorting conveyors.</p>
+        </div>
+        <div class="card reveal d6" style="padding:22px 26px; border-color:var(--card-border-strong);">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); margin-bottom:6px;">PRIORITY</div>
+          <p style="font-size:18px; color:var(--ink); margin:0; font-weight:500;">Highest ROI in the entire system.</p>
+        </div>
+      </div>
+
+      <div class="pop-in" style="flex:0.9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:40px; background:rgba(31,216,180,0.05); border:1px solid var(--card-border-strong); border-radius:4px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.1em;">PROJECTED IMPACT</div>
+        <div style="font-family:var(--f-display); font-size:78px; color:var(--teal-bright); font-weight:600; line-height:1;">+15&ndash;20</div>
+        <div style="font-size:17px; color:var(--ink-soft); text-align:center;">percentage points toward the Vision 2030 target</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">23 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 24 — REC 02: PREDICTIVE MAINTENANCE DEPLOYMENT
+     ============================================================ -->
+<section class="slide" id="slide-24" data-slide="24">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>09 &middot; STRATEGIC RECOMMENDATIONS</div>
+    <div class="reveal d2" style="display:flex; align-items:baseline; gap:20px; margin-bottom:6px;">
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--canvas); background:var(--teal); padding:4px 12px; border-radius:3px; font-weight:600; letter-spacing:.05em;">HIGH IMPACT</span>
+      <span style="font-family:var(--f-mono); font-size:15px; color:var(--gold-dim); letter-spacing:.1em;">REC 02</span>
+    </div>
+    <h2 class="section-title reveal d3">Predictive Maintenance<br><span class="accent">Deployment</span></h2>
+
+    <div style="display:flex; gap:54px; margin-top:38px;">
+      <div style="flex:1.3; display:flex; flex-direction:column; gap:22px;">
+        <div class="reveal d4">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">DATA BASIS</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">Mechanical failure accounts for 34% of all downtime; the right-skewed distribution shows a few catastrophic events cause the majority of losses.</p>
+        </div>
+        <div class="reveal d5">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">ACTION</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">Deploy condition-monitoring sensor networks (vibration, temperature, pressure) on critical machinery, plus ML-based predictive maintenance models trained on historical failure patterns.</p>
+        </div>
+        <div class="card reveal d6" style="padding:22px 26px;">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--rust-bright); margin-bottom:6px;">INDUSTRY BENCHMARK</div>
+          <p style="font-size:18px; color:var(--ink); margin:0;">Predictive maintenance reduces unplanned downtime by 30&ndash;50% across comparable industrial settings.</p>
+        </div>
+      </div>
+
+      <div class="pop-in" style="flex:0.9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:40px; background:rgba(226,87,76,0.05); border:1px solid rgba(226,87,76,0.35); border-radius:4px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.1em;">PROJECTED IMPACT</div>
+        <div style="font-family:var(--f-display); font-size:60px; color:var(--rust-bright); font-weight:600; line-height:1.1; text-align:center;">&minus;30 to 50%</div>
+        <div style="font-size:16px; color:var(--ink-soft); text-align:center;">reduction in mechanical downtime</div>
+        <div class="hairline" style="margin:14px 0;"></div>
+        <div style="font-family:var(--f-display); font-size:40px; color:var(--gold-bright); font-weight:600;">+10%+</div>
+        <div style="font-size:16px; color:var(--ink-soft); text-align:center;">recovered processing capacity</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">24 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 25 — REC 03: ROUTE OPTIMIZATION ALGORITHMS
+     ============================================================ -->
+<section class="slide" id="slide-25" data-slide="25">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>09 &middot; STRATEGIC RECOMMENDATIONS</div>
+    <div class="reveal d2" style="display:flex; align-items:baseline; gap:20px; margin-bottom:6px;">
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--canvas); background:var(--gold); padding:4px 12px; border-radius:3px; font-weight:600; letter-spacing:.05em;">MEDIUM IMPACT</span>
+      <span style="font-family:var(--f-mono); font-size:15px; color:var(--gold-dim); letter-spacing:.1em;">REC 03</span>
+    </div>
+    <h2 class="section-title reveal d3">Route Optimization<br><span class="accent-gold">Algorithms</span></h2>
+
+    <div style="display:flex; gap:54px; margin-top:38px;">
+      <div style="flex:1.3; display:flex; flex-direction:column; gap:22px;">
+        <div class="reveal d4">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">DATA BASIS</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">73% collection efficiency, with pronounced troughs on Monday mornings and through summer months &mdash; consistent with fleet maintenance gaps and heat-related vehicle degradation.</p>
+        </div>
+        <div class="reveal d5">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">ACTION</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">Apply Vehicle Routing Problem (VRP) algorithms to collection scheduling.</p>
+        </div>
+        <div class="card reveal d6" style="padding:22px 26px; border-color:var(--card-border-strong);">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); margin-bottom:6px;">CAPITAL REQUIRED</div>
+          <p style="font-size:18px; color:var(--ink); margin:0; font-weight:500;">Zero &mdash; a software-only intervention.</p>
+        </div>
+      </div>
+
+      <div class="pop-in" style="flex:0.9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:40px; background:rgba(201,162,60,0.05); border:1px solid var(--card-border-strong); border-radius:4px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.1em;">PROJECTED IMPACT</div>
+        <div style="display:flex; align-items:center; gap:18px;">
+          <div style="text-align:center;"><div style="font-family:var(--f-display); font-size:50px; color:var(--ink-mute); font-weight:600;">73%</div><div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-faint);">TODAY</div></div>
+          <div style="font-size:28px; color:var(--gold-bright);">&rarr;</div>
+          <div style="text-align:center;"><div style="font-family:var(--f-display); font-size:58px; color:var(--gold-bright); font-weight:600;">85%+</div><div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-faint);">PROJECTED</div></div>
+        </div>
+        <div style="font-size:16px; color:var(--ink-soft); text-align:center;">8&ndash;12 percentage point recovery in collection efficiency</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">25 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 26 — REC 04: BEST-PRACTICE DISSEMINATION PROGRAM
+     ============================================================ -->
+<section class="slide" id="slide-26" data-slide="26">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>09 &middot; STRATEGIC RECOMMENDATIONS</div>
+    <div class="reveal d2" style="display:flex; align-items:baseline; gap:20px; margin-bottom:6px;">
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--canvas); background:var(--gold); padding:4px 12px; border-radius:3px; font-weight:600; letter-spacing:.05em;">MEDIUM IMPACT</span>
+      <span style="font-family:var(--f-mono); font-size:15px; color:var(--gold-dim); letter-spacing:.1em;">REC 04</span>
+    </div>
+    <h2 class="section-title reveal d3">Best-Practice Dissemination<br><span class="accent-gold">Program</span></h2>
+
+    <div style="display:flex; gap:54px; margin-top:38px;">
+      <div style="flex:1.3; display:flex; flex-direction:column; gap:22px;">
+        <div class="reveal d4">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">DATA BASIS</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">A 40%+ gap between best and average facilities &mdash; not explained by capital differences (see Finding 04).</p>
+        </div>
+        <div class="reveal d5">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">ACTION</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">A structured knowledge-transfer program leveraging existing human capital from top-performing facilities to average ones.</p>
+        </div>
+        <div class="card reveal d6" style="padding:22px 26px;">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); margin-bottom:6px;">CAPITAL REQUIRED</div>
+          <p style="font-size:18px; color:var(--ink); margin:0; font-weight:500;">Minimal &mdash; primarily a management and training initiative.</p>
+        </div>
+      </div>
+
+      <div class="pop-in" style="flex:0.9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:40px; background:rgba(201,162,60,0.05); border:1px solid var(--card-border-strong); border-radius:4px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.1em;">PROJECTED IMPACT</div>
+        <div style="font-family:var(--f-display); font-size:70px; color:var(--gold-bright); font-weight:600; line-height:1;">50%+</div>
+        <div style="font-size:17px; color:var(--ink-soft); text-align:center;">narrowing of the best-to-average performance gap</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">26 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 27 — REC 05: DATA GOVERNANCE FRAMEWORK
+     ============================================================ -->
+<section class="slide" id="slide-27" data-slide="27">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>09 &middot; STRATEGIC RECOMMENDATIONS</div>
+    <div class="reveal d2" style="display:flex; align-items:baseline; gap:20px; margin-bottom:6px;">
+      <span style="font-family:var(--f-mono); font-size:14px; color:var(--canvas); background:var(--ink-soft); padding:4px 12px; border-radius:3px; font-weight:600; letter-spacing:.05em;">FOUNDATIONAL</span>
+      <span style="font-family:var(--f-mono); font-size:15px; color:var(--gold-dim); letter-spacing:.1em;">REC 05</span>
+    </div>
+    <h2 class="section-title reveal d3">Data Governance<br><span class="accent">Framework</span></h2>
+
+    <div style="display:flex; gap:54px; margin-top:38px;">
+      <div style="flex:1.3; display:flex; flex-direction:column; gap:22px;">
+        <div class="reveal d4">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">DATA BASIS</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">Initial data quality review revealed non-standardized categorical definitions, varying timestamp formats, and non-random missing data patterns.</p>
+        </div>
+        <div class="reveal d5">
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:8px;">ACTION</div>
+          <p style="font-size:18px; color:var(--ink-soft); line-height:1.6; margin:0;">Establish uniform field definitions, mandatory entry validation, quarterly data quality audits, and a central data stewardship role.</p>
+        </div>
+      </div>
+
+      <div class="pop-in" style="flex:0.9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:40px; background:rgba(232,240,234,0.04); border:1px solid var(--card-border-strong); border-radius:4px;">
+        <div style="font-family:var(--f-mono); font-size:14px; color:var(--ink-mute); letter-spacing:.1em;">PROJECTED IMPACT</div>
+        <div style="font-family:var(--f-display); font-style:italic; font-size:34px; color:var(--ink); font-weight:500; text-align:center; line-height:1.3;">Enables and amplifies<br><span style="color:var(--gold-bright);">all other interventions</span></div>
+        <div style="font-size:16px; color:var(--ink-soft); text-align:center; margin-top:6px;">Foundational prerequisite for everything else</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">27 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 28 — COMBINED IMPACT SUMMARY
+     ============================================================ -->
+<section class="slide" id="slide-28" data-slide="28">
+  <div class="slide-inner" style="justify-content:center; align-items:center; text-align:center;">
+    <div class="kicker reveal d1" style="position:absolute; top:88px; left:120px;"><span class="dot"></span><span class="rule"></span>09 &middot; STRATEGIC RECOMMENDATIONS</div>
+
+    <div style="max-width:1320px;">
+      <div class="reveal d2" style="font-family:var(--f-mono); font-size:16px; color:var(--teal); letter-spacing:.15em; margin-bottom:18px;">COMBINED IMPACT OF ALL FIVE INTERVENTIONS</div>
+      <h2 class="reveal d3" style="font-family:var(--f-display); font-size:88px; font-weight:600; color:var(--ink); margin:0; line-height:1.05;">
+        +<span class="accent-gold" style="color:var(--gold-bright);">15&ndash;20</span> points
+      </h2>
+      <p class="reveal d4" style="font-family:var(--f-display); font-style:italic; font-size:30px; color:var(--ink-soft); margin-top:22px;">in effective material recovery rate</p>
+      <p class="reveal d5" style="font-size:20px; color:var(--ink-mute); max-width:1000px; margin:34px auto 0; line-height:1.6;">Sufficient to bridge the gap to the 2030 target &mdash; subject to implementation fidelity and infrastructure readiness.</p>
+
+      <div class="reveal d6" style="display:flex; justify-content:center; gap:0; margin-top:54px; align-items:center;">
+        <div style="text-align:center; padding:0 40px;"><div style="font-family:var(--f-display); font-size:46px; color:var(--ink-mute); font-weight:600;">37%</div><div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint); margin-top:4px;">2024 BASELINE</div></div>
+        <div style="font-size:30px; color:var(--gold-bright); margin-top:-22px;">+</div>
+        <div style="text-align:center; padding:0 40px;"><div style="font-family:var(--f-display); font-size:46px; color:var(--gold-bright); font-weight:600;">15&ndash;20pts</div><div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint); margin-top:4px;">COMBINED LIFT</div></div>
+        <div style="font-size:30px; color:var(--teal-bright); margin-top:-22px;">=</div>
+        <div style="text-align:center; padding:0 40px;"><div style="font-family:var(--f-display); font-size:46px; color:var(--teal-bright); font-weight:600;">52&ndash;60%</div><div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint); margin-top:4px;">PROJECTED RANGE</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">28 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 29 — ROI & IMPACT SIMULATOR
+     ============================================================ -->
+<section class="slide" id="slide-29" data-slide="29">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>10 &middot; THE ROI &amp; IMPACT SIMULATOR</div>
+    <h2 class="section-title reveal d2">An Interactive <span class="accent">Sandbox</span><br>for Closing the Gap</h2>
+    <p class="lede reveal d3" style="margin-top:10px;">Found on the live site's Recommendations page: three sliders let stakeholders model the combined effect of REC 01&ndash;03 in real time, against the 60% Vision 2030 target.</p>
+
+    <div style="display:flex; gap:40px; margin-top:36px;">
+      <div style="flex:1.2; display:flex; flex-direction:column; gap:20px;">
+        <div class="card reveal d4" style="padding:22px 26px;">
+          <div style="display:flex; justify-content:space-between; font-size:16px; color:var(--ink-soft);"><span>Fleet Routing Optimization <span style="color:var(--ink-faint); font-family:var(--f-mono); font-size:13px;">(REC 03)</span></span><span style="color:var(--teal-bright); font-weight:600;">73% &rarr; 90%</span></div>
+          <div style="height:8px; background:rgba(232,240,234,0.1); border-radius:4px; margin-top:12px; overflow:hidden;"><div class="grow-bar" style="width:73%; height:100%; background:var(--teal);"></div></div>
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint); margin-top:10px;">Per 1% increase: +0.25% recycling rate &middot; +1.8M EGP ROI &middot; +25,000 tons diverted</div>
+        </div>
+        <div class="card reveal d5" style="padding:22px 26px; border-color:var(--card-border-strong);">
+          <div style="display:flex; justify-content:space-between; font-size:16px; color:var(--ink-soft);"><span>Sorting Accuracy &amp; Technology <span style="color:var(--ink-faint); font-family:var(--f-mono); font-size:13px;">(REC 01)</span></span><span style="color:var(--gold-bright); font-weight:600;">88% &rarr; 99%</span></div>
+          <div style="height:8px; background:rgba(232,240,234,0.1); border-radius:4px; margin-top:12px; overflow:hidden;"><div class="grow-bar" style="width:88%; height:100%; background:var(--gold);"></div></div>
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint); margin-top:10px;">Per 1% increase: +1.2% recycling rate (2.3&times; multiplier) &middot; +8.5M EGP ROI &middot; +120,000 tons diverted</div>
+        </div>
+        <div class="card reveal d6" style="padding:22px 26px;">
+          <div style="display:flex; justify-content:space-between; font-size:16px; color:var(--ink-soft);"><span>Equipment Maintenance Uptime <span style="color:var(--ink-faint); font-family:var(--f-mono); font-size:13px;">(REC 02)</span></span><span style="color:var(--rust-bright); font-weight:600;">67% &rarr; 90%</span></div>
+          <div style="height:8px; background:rgba(232,240,234,0.1); border-radius:4px; margin-top:12px; overflow:hidden;"><div class="grow-bar" style="width:67%; height:100%; background:var(--rust);"></div></div>
+          <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint); margin-top:10px;">Per 1% increase: +0.5% recycling rate &middot; +3.2M EGP ROI &middot; +50,000 tons diverted</div>
+        </div>
+      </div>
+
+      <div style="flex:0.8; display:flex; flex-direction:column; gap:16px;">
+        <div class="card pop-in" style="padding:24px; text-align:center;">
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-mute); letter-spacing:.08em;">PROJECTED EFFECTIVE RECYCLING RATE</div>
+          <div style="font-family:var(--f-display); font-size:40px; color:var(--teal-bright); font-weight:600; margin-top:8px;">37.0% &rarr; 60%+</div>
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--gold-bright); margin-top:6px;">"Target Met! &#127881;" badge at &ge;60%</div>
+        </div>
+        <div class="card pop-in" style="padding:24px; text-align:center;">
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-mute); letter-spacing:.08em;">ESTIMATED ANNUAL RETURN</div>
+          <div style="font-family:var(--f-display); font-size:40px; color:var(--gold-bright); font-weight:600; margin-top:8px;">M EGP</div>
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-mute); margin-top:6px;">Combined cost savings &amp; material sales</div>
+        </div>
+        <div class="card pop-in" style="padding:24px; text-align:center;">
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-mute); letter-spacing:.08em;">LANDFILL DIVERSION GAIN</div>
+          <div style="font-family:var(--f-display); font-size:40px; color:var(--ink); font-weight:600; margin-top:8px;">Tons / Year</div>
+          <div style="font-family:var(--f-mono); font-size:12px; color:var(--ink-mute); margin-top:6px;">Additional waste diverted annually</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">29 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 30 — THE SORTING MINIGAME
+     ============================================================ -->
+<section class="slide" id="slide-30" data-slide="30">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>11 &middot; THE SORTING MINIGAME</div>
+    <h2 class="section-title reveal d2">Conveyor Belt <span class="accent-gold">Sorting Game</span></h2>
+    <p class="lede reveal d3" style="margin-top:10px;">An interactive, Canvas-based educational game that makes the 2.3&times; sorting-accuracy finding tangible &mdash; click incoming materials to route them to the correct bin before they fall into the landfill.</p>
+
+    <div style="display:flex; gap:48px; margin-top:34px;">
+      <!-- conveyor belt mock visual -->
+      <svg width="780" height="280" viewBox="0 0 780 280">
+        <rect x="0" y="190" width="780" height="50" fill="rgba(232,240,234,0.06)" rx="4"/>
+        <g stroke="rgba(232,240,234,0.18)" stroke-width="2">
+          <line x1="20" y1="195" x2="50" y2="235"/><line x1="80" y1="195" x2="110" y2="235"/>
+          <line x1="140" y1="195" x2="170" y2="235"/><line x1="200" y1="195" x2="230" y2="235"/>
+          <line x1="260" y1="195" x2="290" y2="235"/><line x1="320" y1="195" x2="350" y2="235"/>
+          <line x1="380" y1="195" x2="410" y2="235"/><line x1="440" y1="195" x2="470" y2="235"/>
+          <line x1="500" y1="195" x2="530" y2="235"/><line x1="560" y1="195" x2="590" y2="235"/>
+          <line x1="620" y1="195" x2="650" y2="235"/><line x1="680" y1="195" x2="710" y2="235"/>
+        </g>
+        <!-- items on belt -->
+        <g class="pop-in"><circle cx="90" cy="170" r="22" fill="#81C784"/><text x="90" y="177" text-anchor="middle" font-family="Sora" font-weight="700" fill="#0c1f10" font-size="20">O</text></g>
+        <g class="pop-in"><rect x="240" y="148" width="44" height="44" rx="6" fill="#FFD54F"/><text x="262" y="177" text-anchor="middle" font-family="Sora" font-weight="700" fill="#3a2c04" font-size="20">P</text></g>
+        <g class="pop-in"><circle cx="420" cy="170" r="22" fill="#FF8A65"/><text x="420" y="177" text-anchor="middle" font-family="Sora" font-weight="700" fill="#2b1206" font-size="20">M</text></g>
+        <g class="pop-in"><rect x="560" y="148" width="44" height="44" rx="6" fill="#E57373"/><text x="582" y="177" text-anchor="middle" font-family="Sora" font-weight="700" fill="#2b0606" font-size="20">X</text></g>
+        <!-- bins -->
+        <g font-family="Sora" font-size="14" fill="var(--ink-soft)" text-anchor="middle">
+          <text x="90" y="270">🌿 Organic</text><text x="262" y="270">💧 Plastic</text>
+          <text x="420" y="270">🔧 Metal</text><text x="582" y="270">⚠️ Contaminant</text>
+        </g>
+      </svg>
+
+      <div style="flex:1; display:flex; flex-direction:column; gap:18px;">
+        <div class="reveal d4" style="display:flex; gap:30px;">
+          <div class="card" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:26px; color:var(--ink);">45s</div><div style="font-size:13px; color:var(--ink-mute);">SHIFT DURATION</div></div>
+          <div class="card" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:26px; color:var(--teal-bright);">+10</div><div style="font-size:13px; color:var(--ink-mute);">PTS PER CORRECT SORT</div></div>
+          <div class="card" style="flex:1; padding:18px; text-align:center;"><div style="font-family:var(--f-display); font-size:26px; color:var(--rust-bright);">&minus;15</div><div style="font-size:13px; color:var(--ink-mute);">PTS PER CONTAMINANT CLICK</div></div>
+        </div>
+        <div class="reveal d5" style="font-size:17px; color:var(--ink-soft); line-height:1.6;">HUD tracks <strong style="color:var(--ink);">Score</strong>, <strong style="color:var(--ink);">Accuracy %</strong> (correct sorts &divide; total non-contaminant items), and <strong style="color:var(--ink);">Tons Sorted</strong> (+0.1t per correct sort).</div>
+        <div class="card reveal d6" style="padding:20px 24px; border-color:var(--card-border-strong);">
+          <span style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright);">END-OF-SHIFT RESULTS</span>
+          <p style="margin:8px 0 0; font-size:16px; color:var(--ink-soft);">Calculates a <strong style="color:var(--ink);">yield multiplier</strong> (accuracy &times; 2.3) &mdash; directly demonstrating Finding 02 from real operational data.</p>
+        </div>
+        <div class="reveal d7" style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint);">HTML5 CANVAS (800&times;320PX) &middot; GameItem / GameParticle / GameFloatText classes</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">30 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 31 — ECOBOT AI ASSISTANT
+     ============================================================ -->
+<section class="slide" id="slide-31" data-slide="31">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>12 &middot; THE AI CHAT ASSISTANT</div>
+    <h2 class="section-title reveal d2"><span class="accent">EcoBot</span> &mdash; Present on Every Page</h2>
+    <p class="lede reveal d3" style="margin-top:10px;">A floating AI chat assistant powered by the Google Gemini API, with a structured system prompt and a full offline keyword-matching fallback.</p>
+
+    <div style="display:flex; gap:40px; margin-top:34px;">
+      <div class="card reveal d4" style="flex:1; padding:30px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); letter-spacing:.08em; margin-bottom:16px;">CONFIGURATION</div>
+        <div style="display:flex; flex-direction:column; gap:10px; font-size:16px; color:var(--ink-soft);">
+          <div style="display:flex; justify-content:space-between;"><span>API Provider</span><span style="color:var(--ink);">Google Gemini (gemini-pro)</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Endpoint</span><span style="color:var(--ink); font-family:var(--f-mono); font-size:14px;">/api/chat</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Temperature</span><span style="color:var(--ink);">0.7</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Max Output Tokens</span><span style="color:var(--ink);">500</span></div>
+          <div style="display:flex; justify-content:space-between;"><span>Timeout</span><span style="color:var(--ink);">15s &rarr; offline fallback</span></div>
+        </div>
+      </div>
+      <div class="card reveal d5" style="flex:1; padding:30px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.08em; margin-bottom:16px;">SYSTEM PROMPT RULES</div>
+        <div style="display:flex; flex-direction:column; gap:10px; font-size:15px; color:var(--ink-soft); line-height:1.5;">
+          <div>1. Conversational but informative, concise (2&ndash;4 sentences)</div>
+          <div>2. Team questions &rarr; list all 5 members with their cities</div>
+          <div>3. Strictly refuses off-topic questions, redirects to the project</div>
+          <div>4. Never fabricates data &mdash; only the facts in its system context</div>
+        </div>
+      </div>
+      <div class="card reveal d6" style="flex:1; padding:30px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em; margin-bottom:16px;">SUGGESTED QUESTIONS</div>
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:15px; color:var(--ink-soft);">
+          <div>&ldquo;What is EcoMetrics Egypt?&rdquo;</div>
+          <div>&ldquo;What were the key findings?&rdquo;</div>
+          <div>&ldquo;Who are the team members?&rdquo;</div>
+          <div>&ldquo;How does the BI pipeline work?&rdquo;</div>
+          <div>&ldquo;What is Egypt's Vision 2030 target?&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="reveal d7" style="margin-top:28px; font-size:16px; color:var(--ink-mute); max-width:1400px;">On the Analysis page, the "AI Action Plan" button calls <code style="font-family:var(--f-mono); color:var(--teal-bright);">window.triggerBotMessage()</code> to pre-fill the chat with a selected governorate's stats and asks EcoBot for a tailored recycling improvement plan.</p>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">31 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 32 — TECHNOLOGY STACK
+     ============================================================ -->
+<section class="slide" id="slide-32" data-slide="32">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>13 &middot; TECHNOLOGY STACK</div>
+    <h2 class="section-title reveal d2">Built on a <span class="accent">Zero-Dependency</span><br>Frontend, Real Analytics Tools.</h2>
+
+    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap:24px; margin-top:42px;">
+      <div class="card reveal d3" style="padding:28px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--teal); letter-spacing:.08em; margin-bottom:14px;">FRONTEND</div>
+        <div style="font-size:16px; color:var(--ink-soft); line-height:1.7;">HTML5 (9 pages)<br>Vanilla CSS (shared.css, 69KB)<br>Vanilla JS (shared.js, 578 lines)<br>CSS custom properties for theming<br>Google Fonts: Space Grotesk, Inter, JetBrains Mono</div>
+      </div>
+      <div class="card reveal d4" style="padding:28px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.08em; margin-bottom:14px;">UI LIBRARIES (CDN)</div>
+        <div style="font-size:16px; color:var(--ink-soft); line-height:1.7;">Chart.js 4.4.0 &mdash; all charts<br>Lucide Icons &mdash; all SVG icons<br>tsParticles Slim 2.0.6 &mdash; hero particle field</div>
+      </div>
+      <div class="card reveal d5" style="padding:28px;">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--rust-bright); letter-spacing:.08em; margin-bottom:14px;">BACKEND &amp; AI</div>
+        <div style="font-size:16px; color:var(--ink-soft); line-height:1.7;">Google Gemini API (gemini-pro)<br>Serverless function (api/chat.js)<br>GEMINI_API_KEY environment variable</div>
+      </div>
+      <div class="card reveal d6" style="padding:28px; border-color:var(--card-border-strong);">
+        <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink); letter-spacing:.08em; margin-bottom:14px;">DATA &amp; ANALYTICS</div>
+        <div style="font-size:16px; color:var(--ink-soft); line-height:1.7;">Microsoft Power BI Desktop<br>Power Query (M Language)<br>DAX (Data Analysis Expressions)<br>Star Schema modeling<br>CSV source data (2021&ndash;2025)</div>
+      </div>
+    </div>
+
+    <div class="reveal d7" style="display:flex; gap:14px; margin-top:32px; align-items:center;">
+      <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute); letter-spacing:.08em;">DESIGN TOKENS</div>
+      <div style="display:flex; gap:8px;">
+        <span style="width:26px;height:26px;border-radius:4px;background:#060B08; border:1px solid rgba(255,255,255,0.15);"></span>
+        <span style="width:26px;height:26px;border-radius:4px;background:#00E5CC;"></span>
+        <span style="width:26px;height:26px;border-radius:4px;background:#C9A84C;"></span>
+        <span style="width:26px;height:26px;border-radius:4px;background:#FF4444;"></span>
+        <span style="width:26px;height:26px;border-radius:4px;background:#F59E0B;"></span>
+      </div>
+      <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint);">#060B08 &middot; #00E5CC &middot; #C9A84C &middot; #FF4444 &middot; #F59E0B</div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">32 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 33 — GOVERNORATE DATA TABLE
+     ============================================================ -->
+<section class="slide" id="slide-33" data-slide="33">
+  <div class="slide-inner">
+    <div class="kicker reveal d1"><span class="dot"></span><span class="rule"></span>14 &middot; GOVERNORATE-LEVEL DATA</div>
+    <h2 class="section-title reveal d2">27 Governorates.<br>Five Years of <span class="accent-gold">Observation</span>.</h2>
+    <p class="subtitle reveal d3" style="margin-top:8px;">A sample of the underlying dataset (2021&ndash;2025), exported per governorate with population, waste, recycling, and coverage metrics.</p>
+
+    <div class="reveal d4" style="margin-top:28px; overflow:hidden; border-radius:4px; border:1px solid var(--card-border);">
+      <table style="width:100%; border-collapse:collapse; font-size:16px;">
+        <thead>
+          <tr style="background:rgba(201,162,60,0.10);">
+            <th style="text-align:left; padding:14px 20px; font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.05em;">GOVERNORATE</th>
+            <th style="text-align:right; padding:14px 20px; font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.05em;">AVG MSW (TONS/MO)</th>
+            <th style="text-align:right; padding:14px 20px; font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.05em;">AVG RECYCLING RATE</th>
+            <th style="text-align:right; padding:14px 20px; font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.05em;">AVG COVERAGE</th>
+            <th style="text-align:right; padding:14px 20px; font-family:var(--f-mono); font-size:13px; color:var(--gold-bright); letter-spacing:.05em;">POPULATION</th>
+          </tr>
+        </thead>
+        <tbody style="font-family:var(--f-body); color:var(--ink-soft);">
+          <tr style="border-top:1px solid var(--hairline); background:rgba(31,216,180,0.05);"><td style="padding:12px 20px; color:var(--ink); font-weight:600;">Cairo</td><td style="text-align:right; padding:12px 20px;">279,780</td><td style="text-align:right; padding:12px 20px;">15.96%</td><td style="text-align:right; padding:12px 20px; color:var(--teal-bright);">82.01%</td><td style="text-align:right; padding:12px 20px;">10,636,817</td></tr>
+          <tr style="border-top:1px solid var(--hairline); background:rgba(31,216,180,0.05);"><td style="padding:12px 20px; color:var(--ink); font-weight:600;">Giza</td><td style="text-align:right; padding:12px 20px;">255,334</td><td style="text-align:right; padding:12px 20px;">15.94%</td><td style="text-align:right; padding:12px 20px;">80.37%</td><td style="text-align:right; padding:12px 20px;">9,707,387</td></tr>
+          <tr style="border-top:1px solid var(--hairline);"><td style="padding:12px 20px;">Alexandria</td><td style="text-align:right; padding:12px 20px;">158,604</td><td style="text-align:right; padding:12px 20px;">15.87%</td><td style="text-align:right; padding:12px 20px;">81.44%</td><td style="text-align:right; padding:12px 20px;">5,679,854</td></tr>
+          <tr style="border-top:1px solid var(--hairline);"><td style="padding:12px 20px;">Sharqia</td><td style="text-align:right; padding:12px 20px;">117,707</td><td style="text-align:right; padding:12px 20px;">16.04%</td><td style="text-align:right; padding:12px 20px;">37.00%</td><td style="text-align:right; padding:12px 20px;">8,055,066</td></tr>
+          <tr style="border-top:1px solid var(--hairline);"><td style="padding:12px 20px;">Dakahlia</td><td style="text-align:right; padding:12px 20px;">105,634</td><td style="text-align:right; padding:12px 20px;">16.01%</td><td style="text-align:right; padding:12px 20px;">36.91%</td><td style="text-align:right; padding:12px 20px;">7,228,905</td></tr>
+          <tr style="border-top:1px solid var(--hairline);"><td style="padding:12px 20px;">Beheira</td><td style="text-align:right; padding:12px 20px;">101,107</td><td style="text-align:right; padding:12px 20px;">15.96%</td><td style="text-align:right; padding:12px 20px;">35.79%</td><td style="text-align:right; padding:12px 20px;">6,919,095</td></tr>
+          <tr style="border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline);"><td style="padding:12px 20px; color:var(--ink-mute); font-style:italic;">+ 21 more governorates&hellip;</td><td style="text-align:right; padding:12px 20px; color:var(--ink-faint);">&mdash;</td><td style="text-align:right; padding:12px 20px; color:var(--ink-faint);">&mdash;</td><td style="text-align:right; padding:12px 20px; color:var(--ink-faint);">&mdash;</td><td style="text-align:right; padding:12px 20px; color:var(--ink-faint);">&mdash;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reveal d5" style="display:flex; gap:30px; margin-top:24px;">
+      <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-faint);">CSV EXPORT FORMAT (PER GOVERNORATE, 12 MONTHS):</div>
+      <div style="font-family:var(--f-mono); font-size:13px; color:var(--ink-mute);">Date, Governorate, Population, Total_MSW_Generated_Tons_Month, Recycling_Rate_Percentage, Waste_Collection_Coverage_Percentage, Organic/Plastic/Paper/Glass/Metal/Other_Percentage</div>
+    </div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">33 / 34</span></div>
+</section>
+
+<!-- ============================================================
+     SLIDE 34 — CLOSING
+     ============================================================ -->
+<section class="slide" id="slide-34" data-slide="34">
+  <div class="slide-inner" style="justify-content:center; align-items:center; text-align:center;">
+    <svg class="reveal d1" width="380" height="200" viewBox="0 0 430 230" style="margin-bottom:30px;">
+      <defs>
+        <linearGradient id="ringGoldTeal2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="var(--teal)"/><stop offset="100%" stop-color="var(--gold)"/>
+        </linearGradient>
+      </defs>
+      <path class="draw-line" d="M40,115 C40,60 100,40 145,75 C190,110 195,160 215,160 C235,160 240,110 285,75 C330,40 390,60 390,115 C390,170 330,190 285,155 C240,120 235,70 215,70 C195,70 190,120 145,155 C100,190 40,170 40,115 Z"
+        fill="none" stroke="url(#ringGoldTeal2)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="215" cy="115" r="5" fill="var(--teal-bright)"/>
+    </svg>
+
+    <h2 class="reveal d2" style="font-family:var(--f-display); font-size:72px; font-weight:600; color:var(--ink); margin:0;">Turning Waste Into Data.<br><em style="color:var(--gold-bright); font-style:italic;">Data Into Action.</em></h2>
+    <p class="reveal d3" style="font-size:21px; color:var(--ink-soft); max-width:1000px; margin:28px auto 0; line-height:1.6;">Data analytics transforms waste management from a reactive environmental concern into a proactive, evidence-based strategic asset &mdash; in support of Egypt Vision 2030.</p>
+
+    <div class="reveal d4" style="display:flex; gap:50px; margin-top:50px; font-family:var(--f-mono); font-size:15px; color:var(--ink-mute);">
+      <span>github.com/NotTheNix/Waste-Management-Recycling</span>
+      <span style="color:var(--ink-faint);">&middot;</span>
+      <span>DEPI Data Analytics Capstone &middot; 2024&ndash;2025</span>
+    </div>
+    <div class="reveal d5" style="margin-top:18px; font-family:var(--f-mono); font-size:14px; color:var(--ink-faint);">Supervised by Eng. Mahmoud Seraj &middot; Computik Learning Solutions</div>
+  </div>
+  <div class="slide-foot"><span class="brand">EcoMetrics Egypt</span><span class="pageno">34 / 34</span></div>
+</section>
+
+  </div>
+</div>
+
+<button id="arrow-left" aria-label="Previous slide">&#8249;</button>
+<button id="arrow-right" aria-label="Next slide">&#8250;</button>
+<div id="nav-dots"></div>
+<div id="slide-counter"></div>
+
+<script>
+/* ================================================================
+   SECTION: DECK CONTROLLER
+   Handles:
+   - scaling the fixed 1920x1080 #stage uniformly to fit #viewport
+     (letterbox/pillarbox, never reflow)
+   - slide activation purely via the .active class (opacity/visibility/
+     pointer-events come from CSS — never display:none/block)
+   - keyboard (arrows, space, home/end), click-arrows, swipe, and
+     nav-dot navigation
+   - a top progress bar and a slide counter
+   ================================================================ */
+(function () {
+  'use strict';
+
+  var STAGE_W = 1920, STAGE_H = 1080;
+  var stage = document.getElementById('stage');
+  var viewport = document.getElementById('viewport');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var current = 0;
+
+  var navDots = document.getElementById('nav-dots');
+  var progressBar = document.getElementById('progress-bar');
+  var counterEl = document.getElementById('slide-counter');
+  var arrowLeft = document.getElementById('arrow-left');
+  var arrowRight = document.getElementById('arrow-right');
+
+  /* ---- build nav dots ---- */
+  slides.forEach(function (s, i) {
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    b.addEventListener('click', function () { goTo(i); });
+    navDots.appendChild(b);
+  });
+  var dotEls = Array.prototype.slice.call(navDots.querySelectorAll('button'));
+
+  /* ---- scale the fixed stage to fit the viewport, letterboxing as needed ---- */
+  function rescale() {
+    var vw = viewport.clientWidth;
+    var vh = viewport.clientHeight;
+    var scale = Math.min(vw / STAGE_W, vh / STAGE_H);
+    stage.style.transform = 'scale(' + scale + ')';
+  }
+  window.addEventListener('resize', rescale);
+  window.addEventListener('orientationchange', rescale);
+  rescale();
+
+  /* ---- slide activation ---- */
+  function render() {
+    slides.forEach(function (s, i) {
+      s.classList.toggle('active', i === current);
+    });
+    dotEls.forEach(function (d, i) {
+      d.classList.toggle('active', i === current);
+    });
+    progressBar.style.width = (((current + 1) / total) * 100) + '%';
+    counterEl.textContent = (current + 1) + ' / ' + total;
+  }
+
+  function goTo(i) {
+    if (i < 0) i = 0;
+    if (i > total - 1) i = total - 1;
+    current = i;
+    render();
+  }
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  arrowLeft.addEventListener('click', prev);
+  arrowRight.addEventListener('click', next);
+
+  /* ---- keyboard navigation ---- */
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+    else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+  });
+
+  /* ---- wheel / scroll navigation (debounced) ---- */
+  var wheelLock = false;
+  viewport.addEventListener('wheel', function (e) {
+    if (wheelLock) return;
+    if (Math.abs(e.deltaY) < 12) return;
+    wheelLock = true;
+    if (e.deltaY > 0) next(); else prev();
+    setTimeout(function () { wheelLock = false; }, 650);
+  }, { passive: true });
+
+  /* ---- touch swipe navigation ---- */
+  var touchStartX = null;
+  viewport.addEventListener('touchstart', function (e) {
+    touchStartX = e.changedTouches[0].clientX;
+  }, { passive: true });
+  viewport.addEventListener('touchend', function (e) {
+    if (touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) { if (dx < 0) next(); else prev(); }
+    touchStartX = null;
+  }, { passive: true });
+
+  render();
+})();
+
+</script>
+</body>
+</html>
